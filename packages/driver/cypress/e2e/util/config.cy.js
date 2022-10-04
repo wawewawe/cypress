@@ -192,7 +192,7 @@ describe('driver/src/cypress/validate_config', () => {
       })
 
       expect(() => {
-        validateConfig(state, { testIsolation: 'legacy' })
+        validateConfig(state, { testIsolation: 'strict' })
       }).not.to.throw()
     })
 

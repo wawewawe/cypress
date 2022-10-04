@@ -85,6 +85,7 @@ describe('cy.session', { retries: 0 }, () => {
       })
     })
 
+    // TODO: will be removed once test isolation = strict by default
     describe('testIsolation=legacy', { testIsolation: 'legacy' }, () => {
       it('does not clear page', () => {
         cy.visit('/fixtures/form.html')

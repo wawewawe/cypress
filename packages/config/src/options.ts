@@ -370,12 +370,7 @@ const driverConfigOptions: Array<DriverConfigOption> = [
     overrideLevel: 'any',
   }, {
     name: 'testIsolation',
-    // TODO: https://github.com/cypress-io/cypress/issues/23093
-    // When experimentalSessionAndOrigin is removed and released as GA,
-    // update the defaultValue from 'legacy' to 'strict' and
-    // update this code to remove the check/override specific to enable
-    // strict by default when experimentalSessionAndOrigin=true
-    defaultValue: 'legacy',
+    defaultValue: 'strict',
     validation: validate.isOneOf('legacy', 'strict'),
     overrideLevel: 'suite',
   }, {
