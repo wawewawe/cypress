@@ -12,15 +12,14 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
   }
 
   const verifyIdpNotLoggedIn = (config = {}) => {
-    const { isHttps, cookieKey, expectNullCookie, subdomain } = _.defaults(config, {
+    const { isHttps, cookieKey, expectNullCookie } = _.defaults(config, {
       isHttps: false,
       cookieKey: 'user',
       expectNullCookie: true,
-      subdomain: 'www',
     })
     const [protocol, port] = isHttps ? ['https', '3502'] : ['http', '3501']
 
-    cy.origin(`${protocol}://${subdomain}.idp.com:${port}`, { args: { cookieKey, expectNullCookie } }, ({ cookieKey, expectNullCookie }) => {
+    cy.origin(`${protocol}://idp.com:${port}`, { args: { cookieKey, expectNullCookie } }, ({ cookieKey, expectNullCookie }) => {
       cy.get('h1')
       .invoke('text')
       .should('equal', 'Not logged in')
@@ -82,7 +81,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.session(username, () => {
         cy.visit('/fixtures/primary-origin.html')
         cy.get('[data-cy="cookie-login"]').click()
-        cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+        cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
           cy.get('[data-cy="username"]').type(username)
           cy.get('[data-cy="login"]').click()
         })
@@ -105,7 +104,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login-alias"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -116,7 +115,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('handles browser-sent cookies being overridden by server-kept cookies', () => {
       cy.visit('https://localhost:3502/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login-override"]').click()
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -127,7 +126,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('cy.clearCookie() -> not logged in', () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -140,7 +139,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('cy.clearCookies() -> not logged in', () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -162,7 +161,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('no SameSite (defaults to Lax) -> logged in', () => {
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -171,7 +170,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('SameSite=Lax -> logged in', () => {
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('SameSite=Lax')
         cy.get('[data-cy="login"]').click()
@@ -181,7 +180,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('SameSite=Strict -> not logged in', () => {
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('SameSite=Strict')
         cy.get('[data-cy="login"]').click()
@@ -194,7 +193,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     // FIXME: Currently in Firefox, the default cookie setting in the extension is no_restriction, which can be set with Secure=false.
     it('SameSite=None -> not logged in', { browser: '!firefox' }, () => {
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('SameSite=None')
         cy.get('[data-cy="login"]').click()
@@ -205,7 +204,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('invalid SameSite (defaults to Lax) -> logged in', () => {
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('SameSite=Invalid')
         cy.get('[data-cy="login"]').click()
@@ -226,7 +225,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.visit('https://localhost:3502/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login-https"]').click()
 
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Secure')
         cy.get('[data-cy="login"]').click()
@@ -239,7 +238,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Secure')
         cy.get('[data-cy="login"]').click()
@@ -254,7 +253,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.visit('https://localhost:3502/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login-https"]').click()
 
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -266,7 +265,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -287,7 +286,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('no Domain + superdomain -> logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -298,7 +297,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('no Domain + subdomain -> logged in', () => {
       cy.get('[data-cy="cookie-login-subdomain"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -309,7 +308,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('Domain + superdomain -> logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Domain=idp.com')
         cy.get('[data-cy="localhostCookieProps"]').type('Domain=localhost')
@@ -322,7 +321,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('Domain + subdomain -> logged in', () => {
       cy.get('[data-cy="cookie-login-subdomain"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Domain=idp.com')
         cy.get('[data-cy="localhostCookieProps"]').type('Domain=localhost')
@@ -335,7 +334,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('subdomain Domain + superdomain -> not logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Domain=baz.idp.com')
         cy.get('[data-cy="localhostCookieProps"]').type('Domain=localhost')
@@ -349,7 +348,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('subdomain Domain + subdomain -> logged in', () => {
       cy.get('[data-cy="cookie-login-subdomain"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Domain=baz.idp.com')
         cy.get('[data-cy="localhostCookieProps"]').type('Domain=localhost')
@@ -362,16 +361,14 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('subdomain Domain + different subdomain -> not logged in', () => {
       cy.get('[data-cy="cookie-login-subdomain"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Domain=qux.foobar.com')
         cy.get('[data-cy="login"]').click()
       })
 
       // Domain=subdomain requires request to be on that subdomain
-      verifyIdpNotLoggedIn({
-        'subdomain': 'baz',
-      })
+      verifyIdpNotLoggedIn()
     })
   })
 
@@ -387,7 +384,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('path matches -> logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Path=/verify-cookie-login')
         cy.get('[data-cy="localhostCookieProps"]').type('Path=/welcome')
@@ -400,7 +397,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     it('path does not match -> not logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
 
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Path=/nope')
         cy.get('[data-cy="login"]').click()
@@ -423,7 +420,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('expired -> not logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         const expires = (new Date()).toUTCString()
 
         cy.get('[data-cy="username"]').type(username)
@@ -436,7 +433,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('expired -> not accessible via cy.getCookie()', () => {
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         const expires = (new Date()).toUTCString()
 
         cy.get('[data-cy="username"]').type(username)
@@ -449,7 +446,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('expired -> not accessible via document.cookie', () => {
       cy.get('[data-cy="cookie-login-land-on-idp"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         const expires = (new Date()).toUTCString()
 
         cy.get('[data-cy="username"]').type(username)
@@ -476,7 +473,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('past max-age -> not logged in', () => {
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="localhostCookieProps"]').type('Max-Age=1')
         cy.get('[data-cy="login"]').click()
@@ -492,7 +489,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     // as it happens even using cy.setCookie()
     it('past max-age -> not accessible via cy.getCookie()', { browser: '!firefox' }, () => {
       cy.get('[data-cy="cookie-login"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="localhostCookieProps"]').type('Max-Age=1')
         cy.get('[data-cy="login"]').click()
@@ -508,7 +505,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     // as it happens even using cy.setCookie()
     it('past max-age -> not accessible via document.cookie', { browser: '!firefox' }, () => {
       cy.get('[data-cy="cookie-login-land-on-idp"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieProps"]').type('Max-Age=1')
         cy.get('[data-cy="login"]').click()
@@ -529,7 +526,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       it('past Max-Age, before Expires -> not logged in', () => {
         const expires = dayjs().add(1, 'day').toDate().toUTCString()
 
-        cy.origin('http://www.foobar.com:3500', { args: { username, expires } }, ({ username, expires }) => {
+        cy.origin('http://foobar.com:3500', { args: { username, expires } }, ({ username, expires }) => {
           cy.get('[data-cy="username"]').type(username)
           cy.get('[data-cy="localhostCookieProps"]').type(`Max-Age=1; Expires=${expires}`)
           cy.get('[data-cy="login"]').click()
@@ -541,7 +538,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
       })
 
       it('before Max-Age, past Expires -> logged in', () => {
-        cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+        cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
           const expires = (new Date()).toUTCString()
 
           cy.get('[data-cy="username"]').type(username)
@@ -567,7 +564,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Host- + Secure + Path=/ -> logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Host-user')
         cy.get('[data-cy="cookieProps"]').type('Secure; Path=/')
@@ -578,7 +575,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Host-, no Secure -> not logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Host-user')
         cy.get('[data-cy="cookieProps"]').type('Path=/')
@@ -590,7 +587,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Host-, no Path -> logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Host-user')
         cy.get('[data-cy="cookieProps"]').type('Secure')
@@ -601,7 +598,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Host-, disallowed Path -> not logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Host-user')
         cy.get('[data-cy="cookieProps"]').type('Secure; Path=/nope')
@@ -613,7 +610,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Host- + Domain -> not logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Host-user')
         cy.get('[data-cy="cookieProps"]').type('Secure; Path=/; Domain=foobar.com')
@@ -636,7 +633,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Secure- + Secure flag -> logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Secure-user')
         cy.get('[data-cy="cookieProps"]').type('Secure')
@@ -647,7 +644,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('__Secure, no Secure flag -> not logged in', () => {
-      cy.origin('https://www.foobar.com:3502', { args: { username } }, ({ username }) => {
+      cy.origin('https://foobar.com:3502', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="cookieKey"]').clear().type('__Secure-user')
         cy.get('[data-cy="login"]').click()
@@ -682,7 +679,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('works when setting cookie', () => {
       cy.get('[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy.document().then((doc) => {
           doc.cookie = 'key=value'
         })
@@ -693,7 +690,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('works when setting cookie with extra, benign parts', () => {
       cy.get('[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy.document().then((doc) => {
           doc.cookie = 'key=value; wont=beset'
         })
@@ -727,7 +724,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('does not set cookie when invalid', () => {
       cy.get('[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy.document().then((doc) => {
           doc.cookie = '=value'
         })
@@ -738,7 +735,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('works when setting subsequent cookies', () => {
       cy.get('[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy.document().then((doc) => {
           doc.cookie = 'key1=value1'
         })
@@ -754,7 +751,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('makes cookie available to cy.getCookie()', () => {
       cy.get('[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy.document().then((doc) => {
           doc.cookie = 'key=value'
         })
@@ -784,7 +781,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('no longer returns cookie after cy.clearCookie()', () => {
       cy.get('[data-cy="cookie-login-land-on-idp"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -797,7 +794,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('no longer returns cookies after cy.clearCookies()', () => {
       cy.get('[data-cy="cookie-login-land-on-idp"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -810,7 +807,7 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
 
     it('works when setting cookie in addition to cookie that already exists from http request', () => {
       cy.get('[data-cy="cookie-login-land-on-idp"]').click()
-      cy.origin('http://www.foobar.com:3500', { args: { username } }, ({ username }) => {
+      cy.origin('http://foobar.com:3500', { args: { username } }, ({ username }) => {
         cy.get('[data-cy="username"]').type(username)
         cy.get('[data-cy="login"]').click()
       })
@@ -828,9 +825,9 @@ describe('cy.origin - cookie login', { browser: '!webkit' }, () => {
     })
 
     it('sets and reads document.cookie prior to attaching', () => {
-      cy.origin('http://www.foobar.com:3500', () => {}).then(() => {
+      cy.origin('http://foobar.com:3500', () => {}).then(() => {
         // Force remove the spec bridge
-        window?.top?.document.getElementById('Spec Bridge: http://www.foobar.com:3500')?.remove()
+        window?.top?.document.getElementById('Spec Bridge: http://foobar.com:3500')?.remove()
       })
 
       cy.get('[data-cy="document-cookie"]').click()

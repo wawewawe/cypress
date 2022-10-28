@@ -117,18 +117,18 @@ describe('remote states', () => {
     })
   })
 
-  context('#isPrimarySuperDomainOrigin', () => {
+  context('#isPrimaryOrigin', () => {
     it('returns true when the requested url is the primary origin', function () {
-      const isPrimarySuperDomainOrigin = this.remoteStates.isPrimarySuperDomainOrigin('http://localhost:3500')
+      const isPrimaryOrigin = this.remoteStates.isPrimaryOrigin('http://localhost:3500')
 
-      expect(isPrimarySuperDomainOrigin).to.be.true
+      expect(isPrimaryOrigin).to.be.true
     })
 
     it('returns false when the requested url is not the primary origin', function () {
       this.remoteStates.set('https://google.com', {}, false)
-      const isPrimarySuperDomainOrigin = this.remoteStates.isPrimarySuperDomainOrigin('http://google.com')
+      const isPrimaryOrigin = this.remoteStates.isPrimaryOrigin('http://google.com')
 
-      expect(isPrimarySuperDomainOrigin).to.be.false
+      expect(isPrimaryOrigin).to.be.false
     })
   })
 
@@ -168,8 +168,8 @@ describe('remote states', () => {
   })
 
   context('#set', () => {
-    it('sets primary state and origin when isPrimarySuperDomainOrigin is true', function () {
-      expect(this.remoteStates.isPrimarySuperDomainOrigin('http://localhost:3500')).to.be.true
+    it('sets primary state and origin when isPrimaryOrigin is true', function () {
+      expect(this.remoteStates.isPrimaryOrigin('http://localhost:3500')).to.be.true
 
       const state = this.remoteStates.set('https://staging.google.com/foo/bar', {}, true)
 
@@ -189,11 +189,11 @@ describe('remote states', () => {
 
       expect(this.remoteStates.get('https://staging.google.com')).to.deep.equal(state)
 
-      expect(this.remoteStates.isPrimarySuperDomainOrigin('https://staging.google.com')).to.be.true
+      expect(this.remoteStates.isPrimaryOrigin('https://staging.google.com')).to.be.true
     })
 
-    it('sets a secondary state when isPrimarySuperDomainOrigin is false', function () {
-      expect(this.remoteStates.isPrimarySuperDomainOrigin('http://localhost:3500')).to.be.true
+    it('sets a secondary state when isPrimaryOrigin is false', function () {
+      expect(this.remoteStates.isPrimaryOrigin('http://localhost:3500')).to.be.true
 
       const state = this.remoteStates.set('https://staging.google.com/foo/bar', {}, false)
 
@@ -213,8 +213,8 @@ describe('remote states', () => {
 
       expect(this.remoteStates.get('https://staging.google.com')).to.deep.equal(state)
 
-      expect(this.remoteStates.isPrimarySuperDomainOrigin('http://localhost:3500')).to.be.true
-      expect(this.remoteStates.isPrimarySuperDomainOrigin('https://staging.google.com')).to.be.false
+      expect(this.remoteStates.isPrimaryOrigin('http://localhost:3500')).to.be.true
+      expect(this.remoteStates.isPrimaryOrigin('https://staging.google.com')).to.be.false
     })
 
     it('overrides the existing state', function () {

@@ -63,7 +63,7 @@ describe('./lib/cross-origin-callback-loader', () => {
 
     it('is a noop when cy.origin() callback does not contain require() or import()', () => {
       const source = `it('test', () => {
-          cy.origin('http://www.foobar.com:3500', () => {})
+          cy.origin('http://foobar.com:3500', () => {})
         })`
       const { originalMap, resultingSource, resultingMap, store } = callLoader(source)
 
@@ -74,7 +74,7 @@ describe('./lib/cross-origin-callback-loader', () => {
 
     it('is a noop when last argument to cy.origin() is not a callback', () => {
       const source = `it('test', () => {
-          cy.origin('http://www.foobar.com:3500', {})
+          cy.origin('http://foobar.com:3500', {})
         })`
       const { originalMap, resultingSource, resultingMap, store } = callLoader(source)
 
@@ -119,7 +119,7 @@ describe('./lib/cross-origin-callback-loader', () => {
 
       expect(resultingSource).to.equal(stripIndent`
         it('test', () => {
-          cy.origin('http://www.foobar.com:3500', {
+          cy.origin('http://foobar.com:3500', {
             "callbackName": "__cypressCrossOriginCallback",
             "outputFilePath": "/path/to/tmp/cross-origin-cb-abc123.js"
           });
@@ -139,7 +139,7 @@ describe('./lib/cross-origin-callback-loader', () => {
 
       expect(resultingSource).to.equal(stripIndent`
         it('test', () => {
-          cy.other('http://www.foobar.com:3500', {
+          cy.other('http://foobar.com:3500', {
             "callbackName": "__cypressCrossOriginCallback",
             "outputFilePath": "/path/to/tmp/cross-origin-cb-abc123.js"
           });
@@ -253,7 +253,7 @@ describe('./lib/cross-origin-callback-loader', () => {
     it('works when result of require() is invoked', () => {
       const { store } = callLoader(
         `it('test', () => {
-          cy.origin('http://www.foobar.com:3500', () => {
+          cy.origin('http://foobar.com:3500', () => {
             const someVar = 'someValue'
             const result = require('./fn')(someVar)
             expect(result).to.equal('mutated someVar')

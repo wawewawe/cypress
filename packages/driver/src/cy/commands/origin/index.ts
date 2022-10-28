@@ -86,14 +86,14 @@ export default (Commands, Cypress: Cypress.Cypress, cy: Cypress.cy, state: State
 
       validator.validateLocation(location, urlOrDomain)
 
-      const origin = location.origin
+      const superDomainOrigin = location.superDomainOrigin
 
       // This is set while IN the cy.origin command.
-      cy.state('currentActiveOrigin', origin)
+      cy.state('currentActiveSuperDomainOrigin', superDomainOrigin)
 
       return new Bluebird((resolve, reject, onCancel) => {
         const cleanup = ({ readyForOriginFailed }: {readyForOriginFailed?: boolean} = {}): void => {
-          cy.state('currentActiveOrigin', undefined)
+          cy.state('currentActiveSuperDomainOrigin', undefined)
 
           communicator.off('queue:finished', onQueueFinished)
           communicator.off('sync:globals', onSyncGlobals)
@@ -169,23 +169,23 @@ export default (Commands, Cypress: Cypress.Cypress, cy: Cypress.cy, state: State
         }
 
         // fired once the spec bridge is set up and ready to receive messages
-        communicator.once('bridge:ready', async (_data, { origin: specBridgeOrigin }) => {
-          if (specBridgeOrigin === origin) {
+        communicator.once('bridge:ready', async (_data, { superDomainOrigin: specBridgeSuperDomainOrigin }) => {
+          if (specBridgeSuperDomainOrigin === superDomainOrigin) {
             // now that the spec bridge is ready, instantiate Cypress with the current app config and environment variables for initial sync when creating the instance
-            communicator.toSpecBridge(origin, 'initialize:cypress', {
+            communicator.toSpecBridge(superDomainOrigin, 'initialize:cypress', {
               config: preprocessConfig(Cypress.config()),
               env: preprocessEnv(Cypress.env()),
             })
 
             // Attach the spec bridge to the window to be tested.
-            communicator.toSpecBridge(origin, 'attach:to:window')
+            communicator.toSpecBridge(superDomainOrigin, 'attach:to:window')
 
             const fn = _.isFunction(callbackFn) ? callbackFn.toString() : callbackFn
 
             // once the secondary origin page loads, send along the
             // user-specified callback to run in that origin
             try {
-              communicator.toSpecBridge(origin, 'run:origin:fn', {
+              communicator.toSpecBridge(superDomainOrigin, 'run:origin:fn', {
                 args: options?.args || undefined,
                 fn,
                 // let the spec bridge version of Cypress know if config read-only values can be overwritten since window.top cannot be accessed in cross-origin iframes
@@ -238,7 +238,7 @@ export default (Commands, Cypress: Cypress.Cypress, cy: Cypress.cy, state: State
           }
         })
 
-        // this signals to the runner to create the spec bridge for the specified origin
+        // this signals to the runner to create the spec bridge for the specified origin policy
         communicator.emit('expect:origin', location)
       })
     },

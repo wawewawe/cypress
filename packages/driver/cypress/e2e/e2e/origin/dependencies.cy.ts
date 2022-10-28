@@ -114,13 +114,13 @@ describe('cy.origin dependencies', { browser: '!webkit' }, () => {
   })
 
   it('works in support file', () => {
-    cy.origin('http://www.foobar.com:3500', () => {
+    cy.origin('http://foobar.com:3500', () => {
       expect(cy.getAll).to.be.undefined
     })
 
-    cy.originLoadUtils('http://www.foobar.com:3500')
+    cy.originLoadUtils('http://foobar.com:3500')
 
-    cy.origin('http://www.foobar.com:3500', () => {
+    cy.origin('http://foobar.com:3500', () => {
       expect(cy.getAll).to.be.a('function')
     })
   })

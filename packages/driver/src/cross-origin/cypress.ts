@@ -25,6 +25,7 @@ import { patchFetch } from '@packages/runner/injection/patches/fetch'
 import { patchXmlHttpRequest } from '@packages/runner/injection/patches/xmlHttpRequest'
 
 import $Mocha from '../cypress/mocha'
+import * as cors from '@packages/network/lib/cors'
 
 const createCypress = () => {
   // @ts-ignore
@@ -43,8 +44,8 @@ const createCypress = () => {
         const frame = window.parent.frames[index]
 
         try {
-          // the AUT would be the frame with a matching origin, but not the same exact href.
-          if (window.location.origin === frame.location.origin
+          // the AUT would be the frame with a matching super domain origin, but not the same exact href.
+          if (window.location.origin === cors.getSuperDomainOrigin(frame.location.origin)
               && window.location.href !== frame.location.href) {
             return frame
           }
@@ -70,10 +71,10 @@ const createCypress = () => {
   })
 
   Cypress.specBridgeCommunicator.on('generate:final:snapshot', (snapshotUrl: string) => {
-    const currentAutOrigin = cy.state('autLocation').origin
+    const currentAutSuperDomainOrigin = cy.state('autLocation').superDomainOrigin
     const requestedSnapshotUrlLocation = $Location.create(snapshotUrl)
 
-    if (requestedSnapshotUrlLocation.origin === currentAutOrigin) {
+    if (requestedSnapshotUrlLocation.superDomainOrigin === currentAutSuperDomainOrigin) {
       // if true, this is the correct spec bridge to take the snapshot and send it back
       const finalSnapshot = cy.createSnapshot(FINAL_SNAPSHOT_NAME)
 
@@ -194,7 +195,7 @@ const attachToWindow = (autWindow: Window) => {
 
       cy.isStable(false, 'beforeunload')
 
-      // NOTE: we intentionally do not set the cy.Cookies.setInitial() inside the spec bridge as we are not doing full injection and this leads to cookie side effects
+      cy.Cookies.setInitial()
 
       cy.resetTimer()
 

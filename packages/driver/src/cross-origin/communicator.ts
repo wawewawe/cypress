@@ -87,7 +87,7 @@ export class PrimaryOriginCommunicator extends EventEmitter {
       // where we need to set the crossOriginDriverWindows to source to
       // communicate back to the iframe
       if (messageName === 'bridge:ready' && source) {
-        this.crossOriginDriverWindows[data.origin] = source as Window
+        this.crossOriginDriverWindows[data.superDomainOrigin] = source as Window
       }
 
       // reify any logs coming back from the cross-origin spec bridges to serialize snapshot/consoleProp DOM elements as well as select functions.
@@ -104,7 +104,7 @@ export class PrimaryOriginCommunicator extends EventEmitter {
         data.data.err = reifySerializedError(data.data.err, this.userInvocationStack as string)
       }
 
-      this.emit(messageName, data.data, { origin: data.origin, source, responseEvent: data.responseEvent })
+      this.emit(messageName, data.data, { superDomainOrigin: data.superDomainOrigin, source, responseEvent: data.responseEvent })
 
       return
     }
@@ -138,14 +138,14 @@ export class PrimaryOriginCommunicator extends EventEmitter {
 
   /**
    * Sends an event to a specific spec bridge.
-   * @param origin - the origin of the spec bridge to send the event to.
+   * @param superDomainOrigin - the superDomainOrigin of the spec bridge to send the event to.
    * @param event - the name of the event to be sent.
    * @param data - any meta data to be sent with the event.
    * @param responseEvent - the event to be responded with when sending back a result.
    */
-  toSpecBridge (origin: string, event: string, data?: any, responseEvent?: string) {
-    debug('=> to spec bridge', origin, event, data)
-    const source = this.crossOriginDriverWindows[origin]
+  toSpecBridge (superDomainOrigin: string, event: string, data?: any, responseEvent?: string) {
+    debug('=> to spec bridge', superDomainOrigin, event, data)
+    const source = this.crossOriginDriverWindows[superDomainOrigin]
 
     if (source) {
       this.toSource(source, event, data, responseEvent)
@@ -184,12 +184,12 @@ export class PrimaryOriginCommunicator extends EventEmitter {
    * @returns the response from primary of the event with the same name.
    */
   toSpecBridgePromise<T> ({
-    origin,
+    superDomainOrigin,
     event,
     data,
     timeout = 1000,
   }: {
-    origin: string
+    superDomainOrigin: string
     event: string
     data?: any
     timeout: number
@@ -199,12 +199,12 @@ export class PrimaryOriginCommunicator extends EventEmitter {
         resolve,
         reject,
         event,
-        specBridgeName: origin,
+        specBridgeName: superDomainOrigin,
         communicator: this,
         timeout,
       })
 
-      this.toSpecBridge(origin, event, data, responseEvent)
+      this.toSpecBridge(superDomainOrigin, event, data, responseEvent)
     })
   }
 }
@@ -284,7 +284,7 @@ export class SpecBridgeCommunicator extends EventEmitter {
    * @param responseEvent - the event to be responded with when sending back a result.
    */
   toPrimary (event: string, data?: Cypress.ObjectLike, options: { syncGlobals: boolean } = { syncGlobals: false }, responseEvent?: string) {
-    const { origin } = $Location.create(window.location.href)
+    const { superDomainOrigin } = $Location.create(window.location.href)
     const eventName = `${CROSS_ORIGIN_PREFIX}${event}`
 
     // Preprocess logs before sending through postMessage() to attempt to serialize some DOM nodes and functions.
@@ -298,14 +298,14 @@ export class SpecBridgeCommunicator extends EventEmitter {
       data = preprocessSnapshotForSerialization(data as any)
     }
 
-    debug('<= to Primary ', event, data, origin)
+    debug('<= to Primary ', event, data, superDomainOrigin)
     if (options.syncGlobals) this.syncGlobalsToPrimary()
 
     this.handleSubjectAndErr(data, (data: Cypress.ObjectLike) => {
       window.top?.postMessage({
         event: eventName,
         data,
-        origin,
+        superDomainOrigin,
         responseEvent,
       }, '*')
     })

@@ -22,7 +22,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
     cy.visit('/fixtures/primary-origin.html')
     cy.get('a[data-cy="cross-origin-secondary-link"]').click()
 
-    cy.origin('http://www.foobar.com:3500', { args: expectedViewport }, (expectedViewport) => {
+    cy.origin('http://foobar.com:3500', { args: expectedViewport }, (expectedViewport) => {
       const secondaryViewport = [cy.state('viewportWidth'), cy.state('viewportHeight')]
 
       expect(secondaryViewport).to.deep.equal(expectedViewport)
@@ -33,7 +33,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
     it('executes quickly', () => {
       cy.visit('/fixtures/primary-origin.html')
       cy.get('a[data-cy="cross-origin-secondary-link"]').click()
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         expect(true).to.equal(true)
       })
     })
@@ -61,7 +61,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
         expect(err.message).to.include(`\`cy.visit()\` was called to visit a cross origin site with an \`onLoad\` callback. \`onLoad\` callbacks can only be used with same origin sites.
           If you wish to specify an \`onLoad\` callback please use the \`cy.origin\` command to setup a \`window:load\` event prior to visiting the cross origin site.`)
 
-        expect(err.message).to.include(`\`cy.origin('http://www.idp.com:3500', () => {\``)
+        expect(err.message).to.include(`\`cy.origin('http://idp.com:3500', () => {\``)
         expect(err.message).to.include(`\`  cy.on('window:load', () => {\``)
         expect(err.message).to.include(`  \`    <onLoad callback goes here>\``)
         expect(err.message).to.include(`  \`cy.visit('http://www.idp.com:3500/fixtures/auth/index.html')\``)
@@ -82,7 +82,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
         expect(err.message).to.include(`\`cy.visit()\` was called to visit a cross origin site with an \`onBeforeLoad\` callback. \`onBeforeLoad\` callbacks can only be used with same origin sites.
         If you wish to specify an \`onBeforeLoad\` callback please use the \`cy.origin\` command to setup a \`window:before:load\` event prior to visiting the cross origin site.`)
 
-        expect(err.message).to.include(`\`cy.origin('http://www.idp.com:3500', () => {\``)
+        expect(err.message).to.include(`\`cy.origin('http://idp.com:3500', () => {\``)
         expect(err.message).to.include(`\`  cy.on('window:before:load', () => {\``)
         expect(err.message).to.include(`  \`    <onBeforeLoad callback goes here>\``)
         expect(err.message).to.include(`  \`cy.visit('http://www.idp.com:3500/fixtures/auth/index.html')\``)
@@ -106,7 +106,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
     })
 
     it('runs commands in secondary origin', () => {
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy
         .get('[data-cy="dom-check"]')
         .invoke('text')
@@ -152,7 +152,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
         ctx: {},
       }
 
-      cy.origin('http://www.foobar.com:3500', { args: expectedRunnable }, (expectedRunnable) => {
+      cy.origin('http://foobar.com:3500', { args: expectedRunnable }, (expectedRunnable) => {
         const actualRunnable = cy.state('runnable')
 
         expect(actualRunnable.titlePath()).to.deep.equal(expectedRunnable.titlePath)
@@ -171,7 +171,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
     })
 
     it('handles querying nested elements', () => {
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy
         .get('form button')
         .invoke('text')
@@ -182,7 +182,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
     })
 
     it('sets up window.Cypress in secondary origin', () => {
-      cy.origin('http://www.foobar.com:3500', () => {
+      cy.origin('http://foobar.com:3500', () => {
         cy
         .get('[data-cy="cypress-check"]')
         .invoke('text')
@@ -192,39 +192,39 @@ describe('cy.origin', { browser: '!webkit' }, () => {
 
     describe('data argument', () => {
       it('passes object to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: { foo: 'foo', bar: 'bar' } }, ({ foo, bar }) => {
+        cy.origin('http://foobar.com:3500', { args: { foo: 'foo', bar: 'bar' } }, ({ foo, bar }) => {
           expect(foo).to.equal('foo')
           expect(bar).to.equal('bar')
         })
       })
 
       it('passes array to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: ['foo', 'bar'] }, ([foo, bar]) => {
+        cy.origin('http://foobar.com:3500', { args: ['foo', 'bar'] }, ([foo, bar]) => {
           expect(foo).to.equal('foo')
           expect(bar).to.equal('bar')
         })
       })
 
       it('passes string to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: 'foo' }, (foo) => {
+        cy.origin('http://foobar.com:3500', { args: 'foo' }, (foo) => {
           expect(foo).to.equal('foo')
         })
       })
 
       it('passes number to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: 1 }, (num) => {
+        cy.origin('http://foobar.com:3500', { args: 1 }, (num) => {
           expect(num).to.equal(1)
         })
       })
 
       it('passes boolean to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: true }, (bool) => {
+        cy.origin('http://foobar.com:3500', { args: true }, (bool) => {
           expect(bool).to.be.true
         })
       })
 
       it('passes mixed types to callback function', () => {
-        cy.origin('http://www.foobar.com:3500', { args: { foo: 'foo', num: 1, bool: true } }, ({ foo, num, bool }) => {
+        cy.origin('http://foobar.com:3500', { args: { foo: 'foo', num: 1, bool: true } }, ({ foo, num, bool }) => {
           expect(foo).to.equal('foo')
           expect(num).to.equal(1)
           expect(bool).to.be.true
@@ -250,7 +250,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
 
         const variable = 'string'
 
-        cy.origin('http://www.foobar.com:3500', () => {
+        cy.origin('http://foobar.com:3500', () => {
           cy.log(variable)
         })
       })
@@ -261,7 +261,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
           done()
         })
 
-        cy.origin('http://www.foobar.com:3500', () => {
+        cy.origin('http://foobar.com:3500', () => {
           throw 'oops'
         })
       })
@@ -273,7 +273,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
             resolve(undefined)
           })
 
-          cy.origin('http://www.foobar.com:3500', () => {
+          cy.origin('http://foobar.com:3500', () => {
             throw 'oops'
           })
         })
@@ -290,7 +290,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
           done()
         })
 
-        cy.origin('http://www.foobar.com:3500', { args: timeout }, (timeout) => {
+        cy.origin('http://foobar.com:3500', { args: timeout }, (timeout) => {
           cy.get('#doesnt-exist', {
             timeout,
           })
@@ -306,7 +306,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
           done()
         })
 
-        cy.origin('http://www.foobar.com:3500', () => {
+        cy.origin('http://foobar.com:3500', () => {
           cy.get('#doesnt-exist')
         })
       })
@@ -326,7 +326,7 @@ describe('cy.origin', { browser: '!webkit' }, () => {
 
         const variable = () => {}
 
-        cy.origin('http://www.foobar.com:3500', { args: variable }, (variable) => {
+        cy.origin('http://foobar.com:3500', { args: variable }, (variable) => {
           variable()
         })
       })
