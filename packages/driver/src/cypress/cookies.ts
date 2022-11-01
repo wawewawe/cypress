@@ -83,10 +83,6 @@ export const $Cookies = (namespace, domain) => {
       })
     },
 
-    setInitial () {
-      return this.setCy('initial', true)
-    },
-
     defaults () {
       return $errUtils.throwErrByPath('cookies.removed', { args: { cmd: 'Cypress.Cookies.defaults' } })
     },

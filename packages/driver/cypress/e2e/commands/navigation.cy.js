@@ -1,4 +1,3 @@
-const Cookie = require('js-cookie')
 const { stripIndent } = require('common-tags')
 
 const { assertLogLength } = require('../../support/utils')
@@ -1857,44 +1856,6 @@ describe('src/cy/commands/navigation', () => {
 
   // TODO(webkit): fix+unskip for experimental webkit release
   context('#page load', { browser: '!webkit' }, () => {
-    it('sets initial=true and then removes', () => {
-      Cookie.remove('__cypress.initial')
-
-      expect(Cookie.get('__cypress.initial')).to.be.undefined
-
-      let expected = false
-
-      cy.on('window:before:unload', () => {
-        expected = true
-
-        expect(Cookie.get('__cypress.initial')).to.eq('true')
-      })
-
-      // this navigates us to a new page so
-      // we should be setting the initial cookie
-      cy
-      .visit('/fixtures/form.html')
-      .then(() => {
-        cy.once('window:unload', () => {
-          expect(cy.state('onPageLoadErr')).to.be.a('function')
-        })
-
-        return null
-      })
-      .get('a:first').click().then(() => {
-        const listeners = cy.listeners('window:load')
-
-        // everything should have unbound properly
-        expect(listeners.length).to.eq(0)
-
-        expect(expected).to.be.true
-
-        expect(cy.state('onPageLoadErr')).to.be.null
-
-        expect(Cookie.get('__cypress.initial')).to.be.undefined
-      })
-    })
-
     // TODO: broken - https://github.com/cypress-io/cypress/issues/4973 (chrome76+ and firefox)
     it.skip('does not reset the timeout', (done) => {
       cy.timeout(1000)

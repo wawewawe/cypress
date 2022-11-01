@@ -255,7 +255,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.github.com/',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -957,7 +957,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.github.com/',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -986,7 +986,7 @@ describe('Routes', () => {
           url: 'http://www.github.com/gzip',
           gzip: true,
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1013,7 +1013,6 @@ describe('Routes', () => {
           url: 'http://www.github.com/gzip',
           gzip: true,
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -1160,9 +1159,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://localhost:8080/assets/app.js',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(304)
@@ -1189,12 +1185,11 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://getbootstrap.com/foo',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
-          expect(res.headers['set-cookie']).to.include('__cypress.initial=true; Domain=getbootstrap.com; Path=/')
 
           expect(res.headers['location']).to.eq('/')
         })
@@ -1212,12 +1207,11 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://getbootstrap.com/foo?bar=baz',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
-          expect(res.headers['set-cookie']).to.include('__cypress.initial=true; Domain=getbootstrap.com; Path=/')
 
           expect(res.headers['location']).to.eq('/css')
         })
@@ -1237,12 +1231,11 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://getbootstrap.com/foo?bar=baz',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
-          expect(res.headers['set-cookie']).to.include('__cypress.initial=true; Domain=getbootstrap.com; Path=/')
 
           expect(res.headers['location']).to.eq('/css?q=search')
         })
@@ -1262,18 +1255,17 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://getbootstrap.com/foo?bar=baz',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
-          expect(res.headers['set-cookie']).to.include('__cypress.initial=true; Domain=getbootstrap.com; Path=/')
 
           expect(res.headers['location']).to.eq('https://www.google.com/search?q=cypress')
         })
       })
 
-      it('sets cookies and removes __cypress.initial when initial is originally false', function () {
+      it('sets cookies correctly', function () {
         nock(this.server.remoteStates.current().origin)
         .get('/css')
         .reply(302, undefined, {
@@ -1283,9 +1275,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://getbootstrap.com/css',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
@@ -1309,13 +1298,11 @@ describe('Routes', () => {
             return this.rp({
               url: 'http://auth.example.com/login',
               headers: {
-                'Cookie': '__cypress.initial=true',
+                'X-Cypress-Is-AUT-Frame': true,
               },
             })
             .then((res) => {
               expect(res.statusCode).to.eq(code)
-
-              expect(res.headers['set-cookie']).to.include('__cypress.initial=true; Domain=example.com; Path=/')
             })
           })
         })
@@ -1337,15 +1324,13 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.github.com/index.html',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(500)
           expect(res.body).to.include('server error')
           expect(res.body).to.include('document.domain = \'github.com\'')
-
-          expect(res.headers['set-cookie']).to.match(/__cypress.initial=;/)
         })
       })
 
@@ -1489,58 +1474,13 @@ describe('Routes', () => {
           return this.rp({
             url: 'http://localhost:8080/_',
             headers: {
-              'Cookie': '__cypress.unload=true; __cypress.initial=true',
+              'Cookie': '__cypress.unload=true',
             },
           })
           .then((res) => {
             expect(res.statusCode).to.eq(302)
 
             expect(res.headers['location']).to.eq('/__/')
-          })
-        })
-      })
-
-      describe('when initial is true', () => {
-        it('sets back to false', function () {
-          nock(this.server.remoteStates.current().origin)
-          .get('/app.html')
-          .reply(200, 'OK', {
-            'Content-Type': 'text/html',
-          })
-
-          return this.rp({
-            url: 'http://localhost:8080/app.html',
-            headers: {
-              'Cookie': '__cypress.initial=true',
-            },
-          })
-          .then((res) => {
-            expect(res.statusCode).to.eq(200)
-
-            expect(res.headers['set-cookie']).to.match(/initial=;/)
-          })
-        })
-      })
-
-      describe('when initial is false', () => {
-        it('does not reset initial or remoteHost', function () {
-          nock(this.server.remoteStates.current().origin)
-          .get('/app.html')
-          .reply(200, 'OK', {
-            'Content-Type': 'text/html',
-          })
-
-          return this.rp({
-            url: 'http://localhost:8080/app.html',
-            headers: {
-              'Cookie': '__cypress.initial=false',
-            },
-          })
-          .then((res) => {
-            expect(res.statusCode).to.eq(200)
-
-            // there shouldnt be any cookies set here by us
-            expect(res.headers['set-cookie']).not.to.exist
           })
         })
       })
@@ -1555,7 +1495,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/login',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1578,7 +1518,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/login',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1599,9 +1539,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://localhost:8080/login',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -1621,7 +1558,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/login',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1630,8 +1567,6 @@ describe('Routes', () => {
           const setCookie = res.headers['set-cookie']
 
           expect(setCookie[0]).to.eq('userId=123; Path=/')
-
-          expect(setCookie[1]).to.eq('__cypress.initial=; Domain=localhost; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT')
         })
       })
 
@@ -1646,7 +1581,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/login',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1656,7 +1591,6 @@ describe('Routes', () => {
 
           expect(res.headers['set-cookie']).to.deep.eq([
             'userId=123; Path=/',
-            '__cypress.initial=true; Domain=localhost; Path=/',
           ])
         })
       })
@@ -1695,7 +1629,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/auth',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1716,7 +1650,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
             'x-custom': 'value',
           },
         })
@@ -1753,9 +1687,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://localhost:8080/bar',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -1774,9 +1705,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://localhost:8080/bar',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -1795,9 +1723,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://localhost:8080/bar',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -1818,9 +1743,6 @@ describe('Routes', () => {
 
           return this.rp({
             url: 'http://foobar.com/css',
-            headers: {
-              'Cookie': '__cypress.initial=false',
-            },
           })
           .then((res) => {
             expect(res.statusCode).to.eq(200)
@@ -1838,7 +1760,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -1876,7 +1798,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://localhost:8080/foo',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Origin': 'http://localhost:8080',
             'Accept': 'text/html, application/xhtml+xml, */*',
           },
@@ -2177,7 +2098,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2203,7 +2124,7 @@ describe('Routes', () => {
         const res = await this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         const body = cleanResponseBody(res.body)
@@ -2225,7 +2146,7 @@ describe('Routes', () => {
         const res = await this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         const body = cleanResponseBody(res.body)
@@ -2244,7 +2165,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2264,7 +2185,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2286,7 +2207,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2306,7 +2227,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2328,7 +2249,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2350,7 +2271,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
@@ -2370,7 +2291,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -2398,18 +2318,16 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(302)
           expect(res.headers['location']).to.eq('http://www.google.com/foo')
-          expect(res.headers['set-cookie']).to.match(/initial=true/)
 
           return this.rp(res.headers['location'])
           .then((res) => {
             expect(res.statusCode).to.eq(200)
-            expect(res.headers['set-cookie']).to.match(/initial=;/)
 
             expect(res.body).to.include('parent.Cypress')
           })
@@ -2428,7 +2346,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/elements.html',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -2449,7 +2367,7 @@ describe('Routes', () => {
           return this.rp({
             url: `${this.proxy}/elements.html`,
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
             },
           })
           .then((res) => {
@@ -2460,7 +2378,7 @@ describe('Routes', () => {
         })
       })
 
-      it('does not inject when not initial and not html', function () {
+      it('does not inject when not AUT Iframe and not html', function () {
         nock(this.server.remoteStates.current().origin)
         .get('/bar')
         .reply(200, '<html><head></head></html>', {
@@ -2469,9 +2387,6 @@ describe('Routes', () => {
 
         return this.rp({
           url: 'http://www.google.com/bar',
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -2488,7 +2403,7 @@ describe('Routes', () => {
         const res = await this.rp({
           url: 'https://localhost:8443/',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         const body = cleanResponseBody(res.body)
@@ -2511,7 +2426,7 @@ describe('Routes', () => {
           return this.rp({
             url: 'https://www.google.com/',
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
             },
           })
           .then((res) => {
@@ -2556,7 +2471,7 @@ describe('Routes', () => {
         const res = await this.rp({
           url: 'https://www.foobar.com:8443/index.html',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         const body = cleanResponseBody(res.body)
@@ -2574,7 +2489,7 @@ describe('Routes', () => {
         const res = await this.rp({
           url: 'https://docs.foobar.com:8443/index.html',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
           },
         })
         const body = cleanResponseBody(res.body)
@@ -2591,7 +2506,6 @@ describe('Routes', () => {
           return this.rp({
             url: 'https://docs.foobar.com:8443/index.html',
             headers: {
-              'Cookie': '__cypress.initial=false',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             },
           })
@@ -2615,7 +2529,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/iframe',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -2638,7 +2551,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://mail.google.com/iframe',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -2661,7 +2573,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.foobar.com',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'X-Cypress-Is-AUT-Frame': 'true',
           },
@@ -2685,9 +2596,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/json',
           json: true,
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -2706,7 +2614,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.foobar.com',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -2717,7 +2624,7 @@ describe('Routes', () => {
         })
       })
 
-      it('does not inject anything when not text/html response content-type even when __cypress.initial=true', function () {
+      it('does not inject anything when not text/html response content-type even when X-Cypress-Is-AUT-Frame is true', function () {
         nock(this.server.remoteStates.current().origin)
         .get('/json')
         .reply(200, { foo: 'bar' })
@@ -2725,16 +2632,13 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/json',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
             'Accept': 'application/json',
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
           expect(res.body).to.eq(JSON.stringify({ foo: 'bar' }))
-
-          // it should not be telling us to turn this off either
-          expect(res.headers['set-cookie']).not.to.match(/initial/)
         })
       })
 
@@ -2748,7 +2652,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/iframe',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'X-Requested-With': 'XMLHttpRequest',
           },
@@ -2770,9 +2673,7 @@ describe('Routes', () => {
             'Content-Type': 'text/html',
           })
 
-          const headers = {
-            'Cookie': '__cypress.initial=false',
-          }
+          const headers = {}
 
           headers['Accept'] = type
 
@@ -2809,7 +2710,7 @@ describe('Routes', () => {
           return this.rp({
             url: 'http://www.google.com/index.html',
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
             },
           })
           .then((res) => {
@@ -2856,7 +2757,7 @@ describe('Routes', () => {
               url: 'http://www.google.com/index.html',
               gzip: true,
               headers: {
-                'Cookie': '__cypress.initial=true',
+                'X-Cypress-Is-AUT-Frame': true,
               },
             })
             .then((res) => {
@@ -2940,7 +2841,7 @@ describe('Routes', () => {
               url: 'http://www.google.com/index.html',
               gzip: true,
               headers: {
-                'Cookie': '__cypress.initial=true',
+                'X-Cypress-Is-AUT-Frame': true,
               },
             })
             .then((res) => {
@@ -2983,7 +2884,7 @@ describe('Routes', () => {
             url: 'http://www.google.com/index.html',
             gzip: true,
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
             },
           })
           .then(() => {
@@ -3038,7 +2939,7 @@ describe('Routes', () => {
           return this.rp({
             url: 'http://www.google.com/index.html',
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
             },
           })
           .then((res) => {
@@ -3074,6 +2975,7 @@ describe('Routes', () => {
         return this.setup('http://www.google.com')
       })
 
+      // TODO: rename test
       it('does not rewrite html when initial', function () {
         nock(this.server.remoteStates.current().origin)
         .get('/bar')
@@ -3084,7 +2986,7 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -3099,6 +3001,7 @@ describe('Routes', () => {
         })
       })
 
+      // TODO: rename test
       it('does not rewrite html when not initial', function () {
         nock(this.server.remoteStates.current().origin)
         .get('/bar')
@@ -3109,7 +3012,6 @@ describe('Routes', () => {
         return this.rp({
           url: 'http://www.google.com/bar',
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -3141,7 +3043,7 @@ describe('Routes', () => {
           return this.rp({
             url: `${this.proxy}/index.html`,
             headers: {
-              'Cookie': '__cypress.initial=true',
+              'X-Cypress-Is-AUT-Frame': true,
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             },
           })
@@ -3150,7 +3052,6 @@ describe('Routes', () => {
             expect(res.body).to.include('index.html content')
             expect(res.body).to.include('parent.Cypress')
 
-            expect(res.headers['set-cookie']).to.match(/initial=;/)
             expect(res.headers['cache-control']).to.eq('no-cache, no-store, must-revalidate')
             expect(res.headers['etag']).to.exist
 
@@ -3232,7 +3133,6 @@ describe('Routes', () => {
         return this.rp({
           url: `${this.proxy}/index.html`,
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -3247,7 +3147,6 @@ describe('Routes', () => {
         return this.rp({
           url: `${this.proxy}/sub/`,
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -3262,7 +3161,6 @@ describe('Routes', () => {
         return this.rp({
           url: `${this.proxy}/sub`,
           headers: {
-            'Cookie': '__cypress.initial=false',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           },
         })
@@ -3277,9 +3175,6 @@ describe('Routes', () => {
         return this.rp({
           url: `${this.proxy}/assets/foo.json`,
           json: true,
-          headers: {
-            'Cookie': '__cypress.initial=false',
-          },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
@@ -3288,20 +3183,17 @@ describe('Routes', () => {
         })
       })
 
-      it('does not inject anything when not text/html response content-type even when __cypress.initial=true', function () {
+      it('does not inject anything when not text/html response content-type even when X-Cypress-Is-AUT-Frame is true', function () {
         return this.rp({
           url: `${this.proxy}/assets/foo.json`,
           headers: {
-            'Cookie': '__cypress.initial=true',
+            'X-Cypress-Is-AUT-Frame': true,
             'Accept': 'application/json',
           },
         })
         .then((res) => {
           expect(res.statusCode).to.eq(200)
           expect(res.body).to.deep.eq(JSON.stringify({ contents: '<html><head></head></html>' }, null, 2))
-
-          // it should not be telling us to turn this off either
-          expect(res.headers['set-cookie']).not.to.match(/initial/)
         })
       })
     })
@@ -3691,9 +3583,6 @@ describe('Routes', () => {
           username: 'brian@cypress.io',
           password: 'foobar',
         },
-        headers: {
-          'Cookie': '__cypress.initial=false',
-        },
       })
       .then((res) => {
         expect(res.statusCode).to.eq(302)
@@ -3702,6 +3591,7 @@ describe('Routes', () => {
       })
     })
 
+    // TODO: how does this test behave?
     // this happens on a real form submit because beforeunload fires
     // and initial=true gets set
     it('processes POST + redirect on remote initial', function () {
@@ -3722,14 +3612,12 @@ describe('Routes', () => {
           password: 'foobar',
         },
         headers: {
-          'Cookie': '__cypress.initial=true',
+          'X-Cypress-Is-AUT-Frame': true,
         },
       })
       .then((res) => {
         expect(res.statusCode).to.eq(302)
         expect(res.headers['location']).to.match(/dashboard/)
-
-        expect(res.headers['set-cookie']).to.match(/initial=true/)
       })
     })
 
@@ -3853,9 +3741,6 @@ describe('Routes', () => {
         json: true,
         body: {
           payload: { name: 'Brian' },
-        },
-        headers: {
-          'Cookie': '__cypress.initial=false',
         },
       })
       .then((res) => {

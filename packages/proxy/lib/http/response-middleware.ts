@@ -1,9 +1,8 @@
 import _ from 'lodash'
 import charset from 'charset'
 import type Debug from 'debug'
-import type { CookieOptions } from 'express'
 import { cors, concatStream, httpUtils } from '@packages/network'
-import type { CypressIncomingRequest, CypressOutgoingResponse } from '@packages/proxy'
+import type { CypressIncomingRequest } from '@packages/proxy'
 import type { HttpMiddleware } from '.'
 import iconv from 'iconv-lite'
 import type { IncomingMessage, IncomingHttpHeaders } from 'http'
@@ -98,28 +97,6 @@ function resContentTypeIsJavaScript (res: IncomingMessage) {
 
 function resIsGzipped (res: IncomingMessage) {
   return (res.headers['content-encoding'] || '').includes('gzip')
-}
-
-function setCookie (res: CypressOutgoingResponse, k: string, v: string, domain: string) {
-  let opts: CookieOptions = { domain }
-
-  if (!v) {
-    v = ''
-
-    opts.expires = new Date(0)
-  }
-
-  return res.cookie(k, v, opts)
-}
-
-function setInitialCookie (res: CypressOutgoingResponse, remoteState: any, value) {
-  // dont modify any cookies if we're trying to clear the initial cookie and we're not injecting anything
-  // dont set the cookies if we're not on the initial request
-  if ((!value && !res.wantsInjection) || !res.isInitial) {
-    return
-  }
-
-  return setCookie(res, '__cypress.initial', value, remoteState.domainName)
 }
 
 // "autoplay *; document-domain 'none'" => { autoplay: "*", "document-domain": "'none'" }
@@ -236,8 +213,7 @@ const PatchExpressSetHeader: ResponseMiddleware = function () {
 }
 
 const SetInjectionLevel: ResponseMiddleware = function () {
-  this.res.isInitial = this.req.cookies['__cypress.initial'] === 'true'
-
+  const isAUTFrame = this.req.isAUTFrame
   const isHTML = resContentTypeIs(this.incomingRes, 'text/html')
   const isRenderedHTML = reqWillRenderHtml(this.req, this.incomingRes)
 
@@ -248,47 +224,38 @@ const SetInjectionLevel: ResponseMiddleware = function () {
   }
 
   this.debug('determine injection')
+  const isReqMatchCurrentSuperDomainOrigin = reqMatchesSuperDomainOrigin(this.req, this.remoteStates.current())
 
-  const isReqMatchSuperDomainOrigin = reqMatchesSuperDomainOrigin(this.req, this.remoteStates.current())
   const getInjectionLevel = () => {
-    if (this.incomingRes.headers['x-cypress-file-server-error'] && !this.res.isInitial) {
-      this.debug('- partial injection (x-cypress-file-server-error)')
-
-      return 'partial'
-    }
-
     // NOTE: Only inject fullCrossOrigin if the super domain origins do not match in order to keep parity with cypress application reloads
-    const isCrossSuperDomainOrigin = !reqMatchesSuperDomainOrigin(this.req, this.remoteStates.getPrimary())
-    const isAUTFrame = this.req.isAUTFrame
+    const isCrossSuperDomainOriginToPrimary = !reqMatchesSuperDomainOrigin(this.req, this.remoteStates.getPrimary())
     const isHTMLLike = isHTML || isRenderedHTML
 
-    if (isCrossSuperDomainOrigin && isAUTFrame && isHTMLLike) {
-      this.debug('- cross origin injection')
+    if (isHTMLLike) {
+      if (isAUTFrame) {
+        if (isCrossSuperDomainOriginToPrimary) {
+          this.debug('- cross origin injection')
 
-      return 'fullCrossOrigin'
+          return 'fullCrossOrigin'
+        }
+
+        // if the navigation is a sub domain navigation from the AUT, full injection is desired / needed
+        this.debug('- full injection')
+
+        return 'full'
+      }
+
+      if (!isCrossSuperDomainOriginToPrimary) {
+        // for same super domain origin iframes so we can partially inject into
+        this.debug('- partial injection')
+
+        return 'partial'
+      }
     }
 
-    if (!isHTML || (!isReqMatchSuperDomainOrigin && !isAUTFrame)) {
-      this.debug('- no injection (not html)')
+    this.debug('- no injection')
 
-      return false
-    }
-
-    if (this.res.isInitial && isHTMLLike) {
-      this.debug('- full injection')
-
-      return 'full'
-    }
-
-    if (!isRenderedHTML) {
-      this.debug('- no injection (not rendered html)')
-
-      return false
-    }
-
-    this.debug('- partial injection (default)')
-
-    return 'partial'
+    return false
   }
 
   if (this.res.wantsInjection != null) {
@@ -299,7 +266,7 @@ const SetInjectionLevel: ResponseMiddleware = function () {
     this.res.wantsInjection = getInjectionLevel()
   }
 
-  if (this.res.wantsInjection) {
+  if (this.res.wantsInjection || (this.incomingRes.headers['x-cypress-file-server-error'] && !isAUTFrame)) {
     // Chrome plans to make document.domain immutable in Chrome 106, with the default value
     // of the Origin-Agent-Cluster header becoming 'true'. We explicitly disable this header
     // so that we can continue to support tests that visit multiple subdomains in a single spec.
@@ -317,9 +284,9 @@ const SetInjectionLevel: ResponseMiddleware = function () {
      this.res.wantsInjection === 'full' ||
      this.res.wantsInjection === 'fullCrossOrigin' ||
      // only modify JavasScript if matching the current origin policy or if experimentalModifyObstructiveThirdPartyCode is enabled (above)
-     (resContentTypeIsJavaScript(this.incomingRes) && isReqMatchSuperDomainOrigin))
+     (resContentTypeIsJavaScript(this.incomingRes) && isReqMatchCurrentSuperDomainOrigin))
 
-  this.debug('injection levels: %o', _.pick(this.res, 'isInitial', 'wantsInjection', 'wantsSecurityRemoved'))
+  this.debug('injection levels: %o', _.pick(this.res, 'isAUTFrame', 'wantsInjection', 'wantsSecurityRemoved'))
 
   this.next()
 }
@@ -466,8 +433,6 @@ const MaybeSendRedirectToClient: ResponseMiddleware = function () {
     return this.next()
   }
 
-  setInitialCookie(this.res, this.remoteStates.current(), true)
-
   this.debug('redirecting to new url %o', { statusCode, newUrl })
   this.res.redirect(Number(statusCode), newUrl)
 
@@ -482,11 +447,6 @@ const CopyResponseStatusCode: ResponseMiddleware = function () {
     this.res.statusMessage = this.incomingRes.statusMessage
   }
 
-  this.next()
-}
-
-const ClearCyInitialCookie: ResponseMiddleware = function () {
-  setInitialCookie(this.res, this.remoteStates.current(), false)
   this.next()
 }
 
@@ -592,7 +552,6 @@ export default {
   MaybeCopyCookiesFromIncomingRes,
   MaybeSendRedirectToClient,
   CopyResponseStatusCode,
-  ClearCyInitialCookie,
   MaybeEndWithEmptyBody,
   MaybeInjectHtml,
   MaybeRemoveSecurity,

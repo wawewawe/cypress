@@ -1,11 +1,6 @@
 /* eslint-disable no-undef */
 describe('page_loading', () => {
-  it('sets __cypress.initial, properly injects, and avoids json injection', () => {
-    // this tests that __cypress.initial is set correctly whilst navigating
-    // between pages, or during cy.reload
-    // additionally this creates an edge case where after __cypress.initial is
-    // set we send an XHR which should not inject because its requested for JSON
-    // but that another XHR which is requested for html should inject
+  it('properly injects and avoids json injection', () => {
     const promise1 = Cypress.Promise.pending()
     const promise2 = Cypress.Promise.pending()
 

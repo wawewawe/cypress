@@ -219,7 +219,6 @@ describe('lib/socket', () => {
 
           const cookies = [
             { name: 'session', value: 'key', path: '/', domain: 'google.com', secure: true, httpOnly: true, expiry: 123 },
-            { domain: 'localhost', name: '__cypress.initial', value: true },
             { domain: 'localhost', name: '__socket', value: '123abc' },
           ]
 

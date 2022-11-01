@@ -1164,8 +1164,6 @@ export class $Cy extends EventEmitter2 implements ITimeouts, IStability, IAssert
       onBeforeUnload (e) {
         cy.isStable(false, 'beforeunload')
 
-        cy.Cookies.setInitial()
-
         cy.resetTimer()
 
         cy.Cypress.action('app:window:before:unload', e)

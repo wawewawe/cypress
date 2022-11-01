@@ -22,7 +22,6 @@ describe('http/response-middleware', function () {
       'MaybeCopyCookiesFromIncomingRes',
       'MaybeSendRedirectToClient',
       'CopyResponseStatusCode',
-      'ClearCyInitialCookie',
       'MaybeEndWithEmptyBody',
       'MaybeInjectHtml',
       'MaybeRemoveSecurity',
@@ -178,7 +177,7 @@ describe('http/response-middleware', function () {
       })
     })
 
-    it('doesn\'t inject anything when not rendered html', function () {
+    it('doesn\'t inject anything when not html nor rendered html', function () {
       prepareContext({
         renderedHTMLOrigins: {},
         getRenderedHTMLOrigins () {
@@ -190,7 +189,7 @@ describe('http/response-middleware', function () {
         },
         incomingRes: {
           headers: {
-            'content-type': 'text/html',
+            'content-type': 'text/xml',
           },
         },
       })
@@ -204,6 +203,7 @@ describe('http/response-middleware', function () {
     it('doesn\'t inject anything when not AUT frame', function () {
       prepareContext({
         req: {
+          isAUTFrame: false,
           cookies: {},
           headers: {},
         },
@@ -245,9 +245,6 @@ describe('http/response-middleware', function () {
       prepareContext({
         req: {
           isAUTFrame: true,
-          cookies: {
-            '__cypress.initial': 'true',
-          },
           headers: {},
         },
         incomingRes: {
@@ -263,7 +260,7 @@ describe('http/response-middleware', function () {
       })
     })
 
-    it('otherwise, partial injection is set', function () {
+    it('otherwise, no injection is set', function () {
       prepareContext({
         renderedHTMLOrigins: {},
         getRenderedHTMLOrigins () {
@@ -289,11 +286,11 @@ describe('http/response-middleware', function () {
 
       return testMiddleware([SetInjectionLevel], ctx)
       .then(() => {
-        expect(ctx.res.wantsInjection).to.equal('partial')
+        expect(ctx.res.wantsInjection).to.equal(false)
       })
     })
 
-    it('injects partial when request is for top-level origin', function () {
+    it('injects full when request is for top-level origin', function () {
       prepareContext({
         renderedHTMLOrigins: {},
         getRenderedHTMLOrigins () {
@@ -319,7 +316,38 @@ describe('http/response-middleware', function () {
 
       return testMiddleware([SetInjectionLevel], ctx)
       .then(() => {
-        expect(ctx.res.wantsInjection).to.equal('partial')
+        expect(ctx.res.wantsInjection).to.equal('full')
+      })
+    })
+
+    it('injects full when request is for super domain origin to support navigation between sub domains', function () {
+      prepareContext({
+        renderedHTMLOrigins: {},
+        getRenderedHTMLOrigins () {
+          return this.renderedHTMLOrigins
+        },
+        req: {
+          proxiedUrl: 'https://app.testme.com/',
+          isAUTFrame: true,
+          cookies: {},
+          headers: {
+            'accept': [
+              'text/html',
+              'application/xhtml+xml',
+            ],
+          },
+        },
+        incomingRes: {
+          headers: {
+            'content-type': 'text/html',
+          },
+        },
+      },
+      'https://www.testme.com')
+
+      return testMiddleware([SetInjectionLevel], ctx)
+      .then(() => {
+        expect(ctx.res.wantsInjection).to.equal('full')
       })
     })
 
@@ -334,6 +362,27 @@ describe('http/response-middleware', function () {
 
     it('sets Origin-Agent-Cluster header to false when injection is expected', function () {
       prepareContext({
+        req: {
+          isAUTFrame: true,
+        },
+        incomingRes: {
+          headers: {
+            'content-type': 'text/html',
+          },
+        },
+      })
+
+      return testMiddleware([SetInjectionLevel], ctx)
+      .then(() => {
+        expect(ctx.res.setHeader).to.be.calledWith('Origin-Agent-Cluster', '?0')
+      })
+    })
+
+    it('sets Origin-Agent-Cluster header to false when x-cypress-file-server-error header is present and the request is not the AUT frame', function () {
+      prepareContext({
+        req: {
+          isAUTFrame: false,
+        },
         incomingRes: {
           headers: {
             // simplest way to make injection expected
@@ -520,11 +569,11 @@ describe('http/response-middleware', function () {
       })
     })
 
-    function prepareContext (props) {
+    function prepareContext (props, primaryOrigin = 'http://127.0.0.1:3501') {
       const remoteStates = new RemoteStates(() => {})
 
       // set the primary remote state
-      remoteStates.set('http://127.0.0.1:3501')
+      remoteStates.set(primaryOrigin)
 
       ctx = {
         incomingRes: {
@@ -539,9 +588,7 @@ describe('http/response-middleware', function () {
         req: {
           proxiedUrl: 'http://127.0.0.1:3501/primary-origin.html',
           headers: {},
-          cookies: {
-            '__cypress.initial': true,
-          },
+          isAUTFrame: true,
           ...props.req,
         },
         remoteStates,

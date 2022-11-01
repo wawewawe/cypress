@@ -72,11 +72,7 @@ describe('e2e page_loading', () => {
     }],
   })
 
-  // this tests that __cypress.initial is set correctly whilst navigating
-  // between pages, or during cy.reload
-  // additionally this creates an edge case where after __cypress.initial is
-  // set we send an XHR which should not inject because its requested for JSON
-  // but that another XHR which is requested for html should inject
+  // TODO: BILL test and fix this
   systemTests.it('passes', {
     browser: '!webkit', // TODO(webkit): fix+unskip (related to document.cookie issue?)
     spec: 'page_loading.cy.js',
