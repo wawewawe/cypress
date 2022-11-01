@@ -486,6 +486,37 @@ describe('http/response-middleware', function () {
             expect(ctx.res.wantsSecurityRemoved).to.be.true
           })
         })
+
+        it(`does not remove security or inject when the request will not render html (csv).`, () => {
+          prepareContext({
+            renderedHTMLOrigins: {},
+            getRenderedHTMLOrigins () {
+              return this.renderedHTMLOrigins
+            },
+            req: {
+              proxiedUrl: 'http://www.some-third-party-csv.csv',
+              isAUTFrame: false,
+              headers: {
+                'accept': ['text/html', 'application/xhtml+xml'],
+              },
+            },
+            incomingRes: {
+              headers: {
+                'content-type': 'text/csv',
+              },
+            },
+            config: {
+              modifyObstructiveCode: true,
+              experimentalModifyObstructiveThirdPartyCode: true,
+            },
+          })
+
+          return testMiddleware([SetInjectionLevel], ctx)
+          .then(() => {
+            expect(ctx.res.wantsSecurityRemoved).to.be.false
+            expect(ctx.res.wantsInjection).to.be.false
+          })
+        })
       })
     })
 
@@ -1405,7 +1436,7 @@ describe('http/response-middleware', function () {
         expect(htmlStub).to.be.calledWith('foo', {
           'deferSourceMapRewrite': undefined,
           'domainName': 'foobar.com',
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': true,
           'modifyObstructiveThirdPartyCode': true,
           'url': 'http://www.foobar.com:3501/primary-origin.html',
@@ -1425,7 +1456,7 @@ describe('http/response-middleware', function () {
         expect(htmlStub).to.be.calledWith('foo', {
           'deferSourceMapRewrite': undefined,
           'domainName': '127.0.0.1',
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': true,
           'modifyObstructiveThirdPartyCode': false,
           'url': 'http://127.0.0.1:3501/primary-origin.html',
@@ -1453,7 +1484,7 @@ describe('http/response-middleware', function () {
         expect(htmlStub).to.be.calledWith('foo', {
           'deferSourceMapRewrite': undefined,
           'domainName': 'foobar.com',
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': false,
           'modifyObstructiveThirdPartyCode': false,
           'url': 'http://www.foobar.com:3501/primary-origin.html',
@@ -1528,7 +1559,7 @@ describe('http/response-middleware', function () {
         expect(securityStub).to.be.calledOnce
         expect(securityStub).to.be.calledWith({
           'deferSourceMapRewrite': undefined,
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': true,
           'modifyObstructiveThirdPartyCode': true,
           'url': 'http://www.foobar.com:3501/primary-origin.html',
@@ -1545,7 +1576,7 @@ describe('http/response-middleware', function () {
         expect(securityStub).to.be.calledOnce
         expect(securityStub).to.be.calledWith({
           'deferSourceMapRewrite': undefined,
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': true,
           'modifyObstructiveThirdPartyCode': false,
           'url': 'http://127.0.0.1:3501/primary-origin.html',
@@ -1570,7 +1601,7 @@ describe('http/response-middleware', function () {
         expect(securityStub).to.be.calledOnce
         expect(securityStub).to.be.calledWith({
           'deferSourceMapRewrite': undefined,
-          'isHtml': true,
+          'isNotJavascript': true,
           'modifyObstructiveCode': false,
           'modifyObstructiveThirdPartyCode': false,
           'url': 'http://www.foobar.com:3501/primary-origin.html',

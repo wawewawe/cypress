@@ -4,7 +4,7 @@ import * as regexRewriter from './regex-rewriter'
 import type { CypressWantsInjection } from '../../types'
 
 export type SecurityOpts = {
-  isHtml?: boolean
+  isNotJavascript?: boolean
   url: string
   useAstSourceRewriting: boolean
   modifyObstructiveThirdPartyCode: boolean
