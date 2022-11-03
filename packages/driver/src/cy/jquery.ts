@@ -15,6 +15,11 @@ export const create = (state: StateFunc) => ({
       context = state('document')
     }
 
+    // if no context still exists, return an empty jquery object instead of querying all of the cypress app
+    if (!context) {
+      return $dom.query(null, context)
+    }
+
     return $dom.query(selector, context)
   },
 
