@@ -54,7 +54,7 @@ export async function fullCrossOrigin (domain, options: InjectionOpts & FullCros
     documentDomainInjection = ''
   }
 
-  return `
+  return oneLine`
     <script type='text/javascript'>
       ${documentDomainInjection}
 
