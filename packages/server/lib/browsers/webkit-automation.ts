@@ -77,6 +77,8 @@ export class WebKitAutomation {
   private browser: playwright.Browser
   private context!: playwright.BrowserContext
   private page!: playwright.Page
+  private noActivityIntervalFn!: NodeJS.Timeout
+  private static readonly noActivityIntervalTime = 30000
 
   private constructor (opts: WebKitAutomationOpts) {
     this.automation = opts.automation
@@ -102,11 +104,13 @@ export class WebKitAutomation {
         size: { width: 1280, height: 720 },
       },
     })
+
     const contextStarted = new Date
     const oldPwPage = this.page
 
     this.page = await newContext.newPage()
     this.context = this.page.context()
+    this.clearAndSetDiagnosticCleanupInterval()
 
     this.handleRequestEvents()
 
@@ -202,9 +206,25 @@ export class WebKitAutomation {
     })
   }
 
+  private clearAndSetDiagnosticCleanupInterval () {
+    if (process.env.DIAGNOSE_WEBKIT_HANG) {
+      if (this.noActivityIntervalFn) {
+        clearInterval(this.noActivityIntervalFn)
+      }
+
+      this.noActivityIntervalFn = setInterval(this.cleanUpAndThrowErrorOnHang.bind(this), WebKitAutomation.noActivityIntervalTime)
+    }
+  }
+
+  private cleanUpAndThrowErrorOnHang () {
+    this.page.close()
+    throw new Error(`The webkit browser has not seen any activity coming to/from the page in ${WebKitAutomation.noActivityIntervalTime}ms. Killing the process.`)
+  }
+
   private handleRequestEvents () {
     // emit preRequest to proxy
     this.page.on('request', (request) => {
+      this.clearAndSetDiagnosticCleanupInterval()
       // ignore socket.io events
       // TODO: use config.socketIoRoute here instead
       if (request.url().includes('/__socket') || request.url().includes('/__cypress')) return
