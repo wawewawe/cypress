@@ -161,9 +161,12 @@ export = {
           return menu.set({ withInternalDevTools: true })
         }
       },
-      async onNewWindow (this: BrowserWindow, e, url) {
+      // TODO: HERE FOR HANDLER
+      async onNewWindow (this: BrowserWindow, e, url): Promise<{ action: 'deny'}> {
         const _win = this
 
+        // likely need to return { action: 'deny'} over event.prevent default
+        // see https://github.com/electron/electron/pull/34526/files#diff-c21189076792cbf92bc10794257ef9b91d2ef6403bfae4d5a0af1805b21850c8R23
         const child = await _this._launchChild(e, url, _win, projectRoot, state, options, automation)
 
         // close child on parent close
@@ -181,6 +184,10 @@ export = {
             instance.allPids.push(child.webContents.getOSProcessId())
           }
         })
+
+        return {
+          action: 'deny',
+        }
       },
     }
 
@@ -210,7 +217,7 @@ export = {
   },
 
   _launchChild (e, url, parent, projectRoot, state, options, automation) {
-    e.preventDefault()
+    // e.preventDefault()
 
     const [parentX, parentY] = parent.getPosition()
 
@@ -230,6 +237,7 @@ export = {
 
     // needed by electron since we prevented default and are creating
     // our own BrowserWindow (https://electron.atom.io/docs/api/web-contents/#event-new-window)
+    // TODO: do we need to update this?? https://github.com/electron/electron/pull/34526
     e.newGuest = win
 
     return this._launch(win, url, automation, electronOptions)

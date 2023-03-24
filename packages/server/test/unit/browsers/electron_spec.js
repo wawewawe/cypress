@@ -792,6 +792,7 @@ describe('lib/browsers/electron', () => {
           on: sinon.stub(),
         }
 
+        // TODO: maybe assert we return with deny action
         opts.onNewWindow.call(parentWindow, event, this.url)
 
         expect(electron._launchChild).to.be.calledWith(

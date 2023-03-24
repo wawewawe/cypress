@@ -17,7 +17,7 @@ export type WindowOptions = Electron.BrowserWindowConstructorOptions & {
    */
   trackState?: TrackStateMap
   onFocus?: () => void
-  onNewWindow?: (e, url, frameName, disposition, options) => Promise<void>
+  onNewWindow?: (e, url, frameName, disposition, options) => Promise<{ action: 'deny'}>
   onCrashed?: () => void
 }
 
@@ -189,9 +189,14 @@ export function create (projectRoot, _options: WindowOptions, newBrowserWindow =
     return options.onCrashed.apply(win, args)
   })
 
-  win.webContents.on('new-window', function (...args) {
+  win.webContents.setWindowOpenHandler((...args) => {
     return options.onNewWindow.apply(win, args)
   })
+
+  // REMOVED!
+  // win.webContents.on('new-window', function (...args) {
+  //   return options.onNewWindow.apply(win, args)
+  // })
 
   if (options.trackState) {
     trackState(projectRoot, options.isTextTerminal, win, options.trackState)

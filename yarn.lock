@@ -2503,7 +2503,7 @@
     fs-extra "^9.0.1"
     minimist "^1.2.5"
 
-"@electron/get@^1.12.4", "@electron/get@^1.6.0":
+"@electron/get@^1.6.0":
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/@electron/get/-/get-1.14.1.tgz#16ba75f02dffb74c23965e72d617adc721d27f40"
   integrity sha512-BrZYyL/6m0ZXz/lDxy/nlVhQz+WF+iPS6qXolEU8atw7h6v1aYkjwJZ63m+bJMBTxDE66X+r2tPS4a/8C82sZw==
@@ -2519,7 +2519,7 @@
     global-agent "^3.0.0"
     global-tunnel-ng "^2.7.1"
 
-"@electron/get@^2.0.0":
+"@electron/get@^2.0.0", "@electron/get@^2.0.2":
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@electron/get/-/get-2.0.2.tgz#ae2a967b22075e9c25aaf00d5941cd79c21efd7e"
   integrity sha512-eFZVFoRXb3GFGd7Ak7W4+6jBl9wBtiZ4AaYOse97ej6mKj5tkyO0dUnUChs1IhJZtx1BENo4/p4WUTXpi6vT+g==
@@ -13335,10 +13335,10 @@ electron-to-chromium@^1.4.251:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.284.tgz#61046d1e4cab3a25238f6bf7413795270f125592"
   integrity sha512-M8WEXFuKXMYMVr45fo8mq0wUrrJHheiKZf6BArTKk9ZBYCKJEOU5H8cdWgDT+qCVZf7Na4lVUaZsA+h6uA9+PA==
 
-electron@23.2.0:
-  version "23.2.0"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-23.2.0.tgz#1c60fec08206e24830f3a8dca2772454c8bc25ba"
-  integrity sha512-De9e21cri0QYct/w6tTNOnKyCt9RVKUw5F8PEN4FPzGR9tr6IT53uyt42uH754uJWrZeLMCAdoXy6/0GmMmYZA==
+electron@22.3.4:
+  version "22.3.4"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-22.3.4.tgz#d5e30a5708d07f13af147d9e5ec8879cb56f4d09"
+  integrity sha512-EY/ieC3gnKYUNOQPJSCIbiMBwEnGs/j0yIAUf0pXPK4BRh2nvXTD5d9OdouAIN7bRNLLPgqoTm0uXgZPAWTVkg==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^16.11.26"
