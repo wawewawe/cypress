@@ -1,11 +1,12 @@
 import _ from 'lodash'
 import { blocked, cors } from '@packages/network'
 import { InterceptRequest, SetMatchingRoutes } from '@packages/net-stubbing'
+import { telemetry } from '@packages/telemetry'
 import { HttpMiddleware, isVerboseTelemetry as isVerbose } from './'
 import { getSameSiteContext, addCookieJarCookiesToRequest, shouldAttachAndSetCookies } from './util/cookies'
 import { doesTopNeedToBeSimulated } from './util/top-simulation'
+import type { Span } from '@opentelemetry/api'
 import type { CypressIncomingRequest } from '../types'
-import { telemetry } from '@packages/telemetry'
 
 // do not use a debug namespace in this file - use the per-request `this.debug` instead
 // available as cypress-verbose:proxy:http
@@ -14,8 +15,7 @@ const debug = null
 
 export type RequestMiddleware = HttpMiddleware<{
   outgoingReq: any
-  // TODO: type this later
-  reqMiddlewareSpan?: any
+  reqMiddlewareSpan?: Span
 }>
 
 const LogRequest: RequestMiddleware = function () {

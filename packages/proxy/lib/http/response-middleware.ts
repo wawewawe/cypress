@@ -2,6 +2,8 @@ import _ from 'lodash'
 import charset from 'charset'
 import type Debug from 'debug'
 import type { CookieOptions } from 'express'
+import type { Span } from '@opentelemetry/api'
+
 import { cors, concatStream, httpUtils } from '@packages/network'
 import type { CypressIncomingRequest, CypressOutgoingResponse } from '@packages/proxy'
 import { telemetry } from '@packages/telemetry'
@@ -28,8 +30,7 @@ interface ResponseMiddlewareProps {
   isGunzipped: boolean
   incomingRes: IncomingMessage
   incomingResStream: Readable
-  // TODO: type this later
-  resMiddlewareSpan?: any
+  resMiddlewareSpan?: Span
 }
 
 export type ResponseMiddleware = HttpMiddleware<ResponseMiddlewareProps>
