@@ -19,6 +19,8 @@ let telemetryInstance: TelemetryNoop | TelemetryClass = new TelemetryNoop
  */
 const isEnabled = (): boolean => process.env.CYPRESS_INTERNAL_ENABLE_TELEMETRY === 'true'
 
+const isVerboseEnabled = (): boolean => process.env.CYPRESS_INTERNAL_ENABLE_TELEMETRY_VERBOSE === 'true'
+
 /**
  * Initialize the telemetry singleton
  * @param namespace - namespace to apply to the singleton
@@ -65,7 +67,14 @@ const init = ({
 export const telemetry = {
   init,
   isEnabled,
-  startSpan: (arg: startSpanOptions) => telemetryInstance.startSpan(arg),
+  startSpan: (arg: startSpanOptions) => {
+    // if the span is declared in verbose mode, but verbosity is disabled, no-op the span creation
+    if (arg.isVerbose && !isVerboseEnabled()) {
+      return undefined
+    }
+
+    return telemetryInstance.startSpan(arg)
+  },
   getSpan: (arg: string) => telemetryInstance.getSpan(arg),
   findActiveSpan: (arg: findActiveSpanOptions) => telemetryInstance.findActiveSpan(arg),
   endActiveSpanAndChildren: (arg?: Span): void => telemetryInstance.endActiveSpanAndChildren(arg),

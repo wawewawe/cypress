@@ -18,6 +18,7 @@ export type startSpanOptions = {
   attachType?: AttachType
   active?: boolean
   parentSpan?: Span
+  isVerbose?: boolean
   opts?: SpanOptions
 }
 
@@ -128,6 +129,8 @@ export class Telemetry implements TelemetryApi {
     // This works well enough for now but may cause issue in the future.
 
     let span: Span
+
+    // if isVerbose is true and the env isn't set, no-op & return undefined
 
     if (parentSpan) {
       // Create a context from the active span.

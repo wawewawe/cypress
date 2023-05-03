@@ -30,6 +30,8 @@ function getRandomColorFn () {
   ).toString(16).padStart(6, 'F').toUpperCase()}`)
 }
 
+export const isVerboseTelemetry = true
+
 export const debugVerbose = Debug('cypress-verbose:proxy:http')
 
 export enum HttpStages {

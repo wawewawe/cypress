@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { blocked, cors } from '@packages/network'
 import { InterceptRequest, SetMatchingRoutes } from '@packages/net-stubbing'
-import type { HttpMiddleware } from './'
+import { HttpMiddleware, isVerboseTelemetry as isVerbose } from './'
 import { getSameSiteContext, addCookieJarCookiesToRequest, shouldAttachAndSetCookies } from './util/cookies'
 import { doesTopNeedToBeSimulated } from './util/top-simulation'
 import type { CypressIncomingRequest } from '../types'
@@ -21,7 +21,7 @@ export type RequestMiddleware = HttpMiddleware<{
 const LogRequest: RequestMiddleware = function () {
   // start the span that is responsible for recording the start time of the entire middleware run on the stack
   // make this span a part of the middleware ctx so we can keep names simple when correlating
-  this.reqMiddlewareSpan = telemetry.startSpan({ name: 'request:middleware', parentSpan: telemetry.getSpan(this.req.proxiedUrl) })
+  this.reqMiddlewareSpan = telemetry.startSpan({ name: 'request:middleware', parentSpan: telemetry.getSpan(this.req.proxiedUrl), isVerbose })
 
   this.debug('proxying request %o', {
     req: _.pick(this.req, 'method', 'proxiedUrl', 'headers'),
@@ -31,7 +31,7 @@ const LogRequest: RequestMiddleware = function () {
 }
 
 const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
-  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const shouldCorrelatePreRequests = this.shouldCorrelatePreRequests()
 
@@ -91,7 +91,7 @@ const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
 }
 
 const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
 
@@ -109,7 +109,7 @@ const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
 }
 
 const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'calculate:credential:level:if:applicable', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'calculate:credential:level:if:applicable', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const doesTopNeedSimulation = doesTopNeedToBeSimulated(this)
 
@@ -145,7 +145,7 @@ const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
 }
 
 const MaybeSimulateSecHeaders: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:simulate:sec:headers', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:simulate:sec:headers', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   span?.setAttributes({
     experimentalModifyObstructiveThirdPartyCode: this.config.experimentalModifyObstructiveThirdPartyCode,
@@ -175,7 +175,7 @@ const MaybeSimulateSecHeaders: RequestMiddleware = function () {
 }
 
 const MaybeAttachCrossOriginCookies: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:attach:cross:origin:cookies', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:attach:cross:origin:cookies', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const doesTopNeedSimulation = doesTopNeedToBeSimulated(this)
 
@@ -264,7 +264,7 @@ function shouldLog (req: CypressIncomingRequest) {
 }
 
 const SendToDriver: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'send:to:driver', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'send:to:driver', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const shouldLogReq = shouldLog(this.req)
 
@@ -282,7 +282,7 @@ const SendToDriver: RequestMiddleware = function () {
 }
 
 const MaybeEndRequestWithBufferedResponse: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:end:with:buffered:response', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:end:with:buffered:response', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const buffer = this.buffers.take(this.req.proxiedUrl)
 
@@ -314,7 +314,7 @@ const MaybeEndRequestWithBufferedResponse: RequestMiddleware = function () {
 }
 
 const RedirectToClientRouteIfUnloaded: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'redirect:to:client:route:if:unloaded', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'redirect:to:client:route:if:unloaded', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const hasAppUnloaded = this.req.cookies['__cypress.unload']
 
@@ -342,7 +342,7 @@ const RedirectToClientRouteIfUnloaded: RequestMiddleware = function () {
 }
 
 const EndRequestsToBlockedHosts: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'end:requests:to:block:hosts', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'end:requests:to:block:hosts', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const { blockHosts } = this.config
 
@@ -375,7 +375,7 @@ const EndRequestsToBlockedHosts: RequestMiddleware = function () {
 }
 
 const StripUnsupportedAcceptEncoding: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'strip:unsupported:accept:encoding', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'strip:unsupported:accept:encoding', parentSpan: this.reqMiddlewareSpan, isVerbose })
   // Cypress can only support plaintext or gzip, so make sure we don't request anything else
   const acceptEncoding = this.req.headers['accept-encoding']
 
@@ -407,7 +407,7 @@ function reqNeedsBasicAuthHeaders (req, { auth, origin }: Cypress.RemoteState) {
 }
 
 const MaybeSetBasicAuthHeaders: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:set:basic:auth:headers', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:set:basic:auth:headers', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   // get the remote state for the proxied url
   const remoteState = this.remoteStates.get(this.req.proxiedUrl)
@@ -430,7 +430,7 @@ const MaybeSetBasicAuthHeaders: RequestMiddleware = function () {
 }
 
 const SendRequestOutgoing: RequestMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'send:request:outgoing', parentSpan: this.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'send:request:outgoing', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   const requestOptions = {
     timeout: this.req.responseTimeout,
@@ -460,7 +460,7 @@ const SendRequestOutgoing: RequestMiddleware = function () {
   }
 
   // the actual req/resp time outbound from the proxy server
-  const requestTimerSpan = telemetry.startSpan({ name: `network:proxy:http:request`, parentSpan: telemetry.getSpan(this.req.proxiedUrl) })
+  const requestTimerSpan = telemetry.startSpan({ name: `network:proxy:http:request`, parentSpan: telemetry.getSpan(this.req.proxiedUrl), isVerbose })
 
   requestTimerSpan?.setAttributes({
     url: this.req.proxiedUrl,

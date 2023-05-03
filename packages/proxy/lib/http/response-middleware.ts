@@ -5,7 +5,7 @@ import type { CookieOptions } from 'express'
 import { cors, concatStream, httpUtils } from '@packages/network'
 import type { CypressIncomingRequest, CypressOutgoingResponse } from '@packages/proxy'
 import { telemetry } from '@packages/telemetry'
-import type { HttpMiddleware, HttpMiddlewareThis } from '.'
+import { HttpMiddleware, HttpMiddlewareThis, isVerboseTelemetry as isVerbose } from '.'
 import iconv from 'iconv-lite'
 import type { IncomingMessage, IncomingHttpHeaders } from 'http'
 import { InterceptResponse } from '@packages/net-stubbing'
@@ -144,7 +144,7 @@ const stringifyFeaturePolicy = (policy: any): string => {
 
 const LogResponse: ResponseMiddleware = function () {
   // start the span that is responsible for recording the start time of the entire middleware run on the stack
-  this.resMiddlewareSpan = telemetry.startSpan({ name: 'response:middleware', parentSpan: telemetry.getSpan(this.req.proxiedUrl) })
+  this.resMiddlewareSpan = telemetry.startSpan({ name: 'response:middleware', parentSpan: telemetry.getSpan(this.req.proxiedUrl), isVerbose })
 
   this.debug('received response %o', {
     req: _.pick(this.req, 'method', 'proxiedUrl', 'headers'),
@@ -156,7 +156,7 @@ const LogResponse: ResponseMiddleware = function () {
 
 const AttachPlainTextStreamFn: ResponseMiddleware = function () {
   this.makeResStreamPlainText = function () {
-    const span = telemetry.startSpan({ name: 'make:res:stream:plain:text', parentSpan: this.resMiddlewareSpan })
+    const span = telemetry.startSpan({ name: 'make:res:stream:plain:text', parentSpan: this.resMiddlewareSpan, isVerbose })
 
     this.debug('ensuring resStream is plaintext')
 
@@ -256,7 +256,7 @@ const PatchExpressSetHeader: ResponseMiddleware = function () {
 }
 
 const SetInjectionLevel: ResponseMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'set:injection:level', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'set:injection:level', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   this.res.isInitial = this.req.cookies['__cypress.initial'] === 'true'
 
@@ -371,7 +371,7 @@ const SetInjectionLevel: ResponseMiddleware = function () {
 
 // https://github.com/cypress-io/cypress/issues/6480
 const MaybeStripDocumentDomainFeaturePolicy: ResponseMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:strip:document:domain:feature:policy', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:strip:document:domain:feature:policy', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   const { 'feature-policy': featurePolicy } = this.incomingRes.headers
 
@@ -437,7 +437,7 @@ const setSimulatedCookies = (ctx: HttpMiddlewareThis<ResponseMiddlewareProps>) =
 }
 
 const MaybeCopyCookiesFromIncomingRes: ResponseMiddleware = async function () {
-  const span = telemetry.startSpan({ name: 'maybe:copy:cookies:from:incoming:res', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:copy:cookies:from:incoming:res', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   const cookies: string | string[] | undefined = this.incomingRes.headers['set-cookie']
 
@@ -557,7 +557,7 @@ const REDIRECT_STATUS_CODES: any[] = [301, 302, 303, 307, 308]
 
 // TODO: this shouldn't really even be necessary?
 const MaybeSendRedirectToClient: ResponseMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:send:redirect:to:client', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:send:redirect:to:client', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   const { statusCode, headers } = this.incomingRes
   const newUrl = headers['location']
@@ -614,7 +614,7 @@ const MaybeEndWithEmptyBody: ResponseMiddleware = function () {
 }
 
 const MaybeInjectHtml: ResponseMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:inject:html', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:inject:html', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   // TODO: should be able to remove as implied with other top spans
   span?.setAttributes({
@@ -633,7 +633,7 @@ const MaybeInjectHtml: ResponseMiddleware = function () {
 
   this.makeResStreamPlainText()
 
-  const streamSpan = telemetry.startSpan({ name: `maybe:inject:html-resp:stream`, parentSpan: span })
+  const streamSpan = telemetry.startSpan({ name: `maybe:inject:html-resp:stream`, parentSpan: span, isVerbose })
 
   this.incomingResStream.pipe(concatStream(async (body) => {
     const nodeCharset = getNodeCharsetFromResponse(this.incomingRes.headers, body, this.debug)
@@ -673,7 +673,7 @@ const MaybeInjectHtml: ResponseMiddleware = function () {
 }
 
 const MaybeRemoveSecurity: ResponseMiddleware = function () {
-  const span = telemetry.startSpan({ name: 'maybe:remove:security', parentSpan: this.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:remove:security', parentSpan: this.resMiddlewareSpan, isVerbose })
 
   // TODO: should be able to remove as implied with other top spans
   span?.setAttributes({
@@ -692,7 +692,7 @@ const MaybeRemoveSecurity: ResponseMiddleware = function () {
 
   this.incomingResStream.setEncoding('utf8')
 
-  const streamSpan = telemetry.startSpan({ name: `maybe:remove:security-resp:stream`, parentSpan: span })
+  const streamSpan = telemetry.startSpan({ name: `maybe:remove:security-resp:stream`, parentSpan: span, isVerbose })
 
   this.incomingResStream = this.incomingResStream.pipe(rewriter.security({
     isNotJavascript: !resContentTypeIsJavaScript(this.incomingRes),
@@ -712,7 +712,7 @@ const MaybeRemoveSecurity: ResponseMiddleware = function () {
 const GzipBody: ResponseMiddleware = function () {
   if (this.isGunzipped) {
     this.debug('regzipping response body')
-    const span = telemetry.startSpan({ name: 'gzip:body', parentSpan: this.resMiddlewareSpan })
+    const span = telemetry.startSpan({ name: 'gzip:body', parentSpan: this.resMiddlewareSpan, isVerbose })
 
     this.incomingResStream = this.incomingResStream.pipe(zlib.createGzip(zlibOptions)).on('error', this.onError).once('finish', () => {
       span?.end()

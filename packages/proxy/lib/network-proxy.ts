@@ -1,5 +1,5 @@
 import { telemetry } from '@packages/telemetry'
-import { Http, ServerCtx } from './http'
+import { Http, ServerCtx, isVerboseTelemetry as isVerbose } from './http'
 import type { BrowserPreRequest } from './types'
 
 export class NetworkProxy {
@@ -14,7 +14,7 @@ export class NetworkProxy {
   }
 
   handleHttpRequest (req, res) {
-    const span = telemetry.startSpan({ name: req.proxiedUrl })
+    const span = telemetry.startSpan({ name: req.proxiedUrl, isVerbose })
 
     this.http.handle(req, res).finally(() => {
       span?.end()
