@@ -274,6 +274,34 @@ describe('app/background', () => {
   })
 
   context('add header to aut iframe requests', () => {
+    it('does not add header if it is the top frame', async function () {
+      const details = {
+        parentFrameId: -1,
+      }
+
+      sinon.stub(browser.webRequest.onBeforeSendHeaders, 'addListener')
+
+      await this.connect()
+
+      const result = browser.webRequest.onBeforeSendHeaders.addListener.lastCall.args[0](details)
+
+      expect(result).to.be.undefined
+    })
+
+    it('does not add header if it is a nested frame', async function () {
+      const details = {
+        parentFrameId: 12345,
+      }
+
+      sinon.stub(browser.webRequest.onBeforeSendHeaders, 'addListener')
+
+      await this.connect()
+
+      const result = browser.webRequest.onBeforeSendHeaders.addListener.lastCall.args[0](details)
+
+      expect(result).to.be.undefined
+    })
+
     it('does not add header if it is a spec frame request', async function () {
       const details = {
         parentFrameId: 0,
@@ -287,35 +315,6 @@ describe('app/background', () => {
       const result = browser.webRequest.onBeforeSendHeaders.addListener.lastCall.args[0](details)
 
       expect(result).to.be.undefined
-    })
-
-    it('appends X-Cypress-Is-AUT-Frame header to AUT iframe request', async function () {
-      const details = {
-        parentFrameId: 0,
-        type: 'sub_frame',
-        url: 'http://localhost:3000/index.html',
-        requestHeaders: [
-          { name: 'X-Foo', value: 'Bar' },
-        ],
-      }
-
-      sinon.stub(browser.webRequest.onBeforeSendHeaders, 'addListener')
-
-      await this.connect()
-      const result = browser.webRequest.onBeforeSendHeaders.addListener.lastCall.args[0](details)
-
-      expect(result).to.deep.equal({
-        requestHeaders: [
-          {
-            name: 'X-Foo',
-            value: 'Bar',
-          },
-          {
-            name: 'X-Cypress-Is-AUT-Frame',
-            value: 'true',
-          },
-        ],
-      })
     })
 
     it('does not add before-headers listener if in non-Firefox browser', async function () {

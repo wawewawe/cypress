@@ -59,11 +59,18 @@ const connect = function (host, path, extraOpts) {
     })
   })
 
+  // TODO: why does this not bounce for type other? debug the extension
   const listenToOnBeforeHeaders = once(() => {
     // adds a header to the request to mark it as a request for the AUT frame
     // itself, so the proxy can utilize that for injection purposes
     browser.webRequest.onBeforeSendHeaders.addListener((details) => {
-      if (details.url.includes('__cypress')) return
+      if (
+        // parentFrameId: 0 means the parent is the top-level, so if it isn't
+        // 0, it's nested inside the AUT and can't be the AUT itself
+        details.parentFrameId !== 0
+        // is the spec frame, not the AUT
+        || details.url.includes('__cypress')
+      ) return
 
       return {
         requestHeaders: [
