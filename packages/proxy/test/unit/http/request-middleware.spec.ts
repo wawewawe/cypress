@@ -13,19 +13,19 @@ describe('http/request-middleware', () => {
   it('exports the members in the correct order', () => {
     expect(_.keys(RequestMiddleware)).to.have.ordered.members([
       'LogRequest',
-      'CorrelateBrowserPreRequest',
       'ExtractCypressMetadataHeaders',
-      'CalculateCredentialLevelIfApplicable',
       'MaybeSimulateSecHeaders',
-      'MaybeAttachCrossOriginCookies',
+      'EndRequestsToBlockedHosts',
+      'StripUnsupportedAcceptEncoding',
+      'MaybeSetBasicAuthHeaders',
       'MaybeEndRequestWithBufferedResponse',
+      'CorrelateBrowserPreRequest',
+      'CalculateCredentialLevelIfApplicable',
+      'MaybeAttachCrossOriginCookies',
       'SetMatchingRoutes',
       'SendToDriver',
       'InterceptRequest',
       'RedirectToClientRouteIfUnloaded',
-      'EndRequestsToBlockedHosts',
-      'StripUnsupportedAcceptEncoding',
-      'MaybeSetBasicAuthHeaders',
       'SendRequestOutgoing',
     ])
   })

@@ -23,6 +23,94 @@ const LogRequest: RequestMiddleware = function () {
   this.next()
 }
 
+const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
+  this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
+
+  if (this.req.headers['x-cypress-is-aut-frame']) {
+    delete this.req.headers['x-cypress-is-aut-frame']
+  }
+
+  this.next()
+}
+
+const MaybeSimulateSecHeaders: RequestMiddleware = function () {
+  if (!this.config.experimentalModifyObstructiveThirdPartyCode) {
+    this.next()
+
+    return
+  }
+
+  // Do NOT disclose destination to an iframe and simulate if iframe was top
+  if (this.req.isAUTFrame && this.req.headers['sec-fetch-dest'] === 'iframe') {
+    this.req.headers['sec-fetch-dest'] = 'document'
+  }
+
+  this.next()
+}
+
+const EndRequestsToBlockedHosts: RequestMiddleware = function () {
+  const { blockHosts } = this.config
+
+  if (blockHosts) {
+    const matches = blocked.matches(this.req.proxiedUrl, blockHosts)
+
+    if (matches) {
+      this.res.set('x-cypress-matched-blocked-host', matches)
+      this.debug('blocking request %o', { matches })
+
+      this.res.status(503).end()
+
+      return this.end()
+    }
+  }
+
+  this.next()
+}
+
+const StripUnsupportedAcceptEncoding: RequestMiddleware = function () {
+  // Cypress can only support plaintext or gzip, so make sure we don't request anything else
+  const acceptEncoding = this.req.headers['accept-encoding']
+
+  if (acceptEncoding) {
+    if (acceptEncoding.includes('gzip')) {
+      this.req.headers['accept-encoding'] = 'gzip'
+    } else {
+      delete this.req.headers['accept-encoding']
+    }
+  }
+
+  this.next()
+}
+
+const MaybeSetBasicAuthHeaders: RequestMiddleware = function () {
+  // get the remote state for the proxied url
+  const remoteState = this.remoteStates.get(this.req.proxiedUrl)
+
+  if (remoteState?.auth && reqNeedsBasicAuthHeaders(this.req, remoteState)) {
+    const { auth } = remoteState
+    const base64 = Buffer.from(`${auth.username}:${auth.password}`).toString('base64')
+
+    this.req.headers['authorization'] = `Basic ${base64}`
+  }
+
+  this.next()
+}
+
+const MaybeEndRequestWithBufferedResponse: RequestMiddleware = function () {
+  const buffer = this.buffers.take(this.req.proxiedUrl)
+
+  if (buffer) {
+    this.debug('ending request with buffered response')
+
+    // NOTE: Only inject fullCrossOrigin here if the super domain origins do not match in order to keep parity with cypress application reloads
+    this.res.wantsInjection = buffer.urlDoesNotMatchPolicyBasedOnDomain ? 'fullCrossOrigin' : 'full'
+
+    return this.onResponse(buffer.response, buffer.stream)
+  }
+
+  this.next()
+}
+
 const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
   if (!this.shouldCorrelatePreRequests()) {
     return this.next()
@@ -67,16 +155,6 @@ const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
   }))
 }
 
-const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
-  this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
-
-  if (this.req.headers['x-cypress-is-aut-frame']) {
-    delete this.req.headers['x-cypress-is-aut-frame']
-  }
-
-  this.next()
-}
-
 const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
   if (!doesTopNeedToBeSimulated(this) ||
     (this.req.resourceType !== undefined && this.req.resourceType !== 'xhr' && this.req.resourceType !== 'fetch')) {
@@ -93,21 +171,6 @@ const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
   // if for some reason the resourceType is not set, have a fallback in place
   this.req.resourceType = !this.req.resourceType ? resourceType : this.req.resourceType
   this.req.credentialsLevel = credentialStatus
-  this.next()
-}
-
-const MaybeSimulateSecHeaders: RequestMiddleware = function () {
-  if (!this.config.experimentalModifyObstructiveThirdPartyCode) {
-    this.next()
-
-    return
-  }
-
-  // Do NOT disclose destination to an iframe and simulate if iframe was top
-  if (this.req.isAUTFrame && this.req.headers['sec-fetch-dest'] === 'iframe') {
-    this.req.headers['sec-fetch-dest'] = 'document'
-  }
-
   this.next()
 }
 
@@ -171,21 +234,6 @@ const SendToDriver: RequestMiddleware = function () {
   this.next()
 }
 
-const MaybeEndRequestWithBufferedResponse: RequestMiddleware = function () {
-  const buffer = this.buffers.take(this.req.proxiedUrl)
-
-  if (buffer) {
-    this.debug('ending request with buffered response')
-
-    // NOTE: Only inject fullCrossOrigin here if the super domain origins do not match in order to keep parity with cypress application reloads
-    this.res.wantsInjection = buffer.urlDoesNotMatchPolicyBasedOnDomain ? 'fullCrossOrigin' : 'full'
-
-    return this.onResponse(buffer.response, buffer.stream)
-  }
-
-  this.next()
-}
-
 const RedirectToClientRouteIfUnloaded: RequestMiddleware = function () {
   // if we have an unload header it means our parent app has been navigated away
   // directly and we need to automatically redirect to the clientRoute
@@ -198,57 +246,9 @@ const RedirectToClientRouteIfUnloaded: RequestMiddleware = function () {
   this.next()
 }
 
-const EndRequestsToBlockedHosts: RequestMiddleware = function () {
-  const { blockHosts } = this.config
-
-  if (blockHosts) {
-    const matches = blocked.matches(this.req.proxiedUrl, blockHosts)
-
-    if (matches) {
-      this.res.set('x-cypress-matched-blocked-host', matches)
-      this.debug('blocking request %o', { matches })
-
-      this.res.status(503).end()
-
-      return this.end()
-    }
-  }
-
-  this.next()
-}
-
-const StripUnsupportedAcceptEncoding: RequestMiddleware = function () {
-  // Cypress can only support plaintext or gzip, so make sure we don't request anything else
-  const acceptEncoding = this.req.headers['accept-encoding']
-
-  if (acceptEncoding) {
-    if (acceptEncoding.includes('gzip')) {
-      this.req.headers['accept-encoding'] = 'gzip'
-    } else {
-      delete this.req.headers['accept-encoding']
-    }
-  }
-
-  this.next()
-}
-
 function reqNeedsBasicAuthHeaders (req, { auth, origin }: Cypress.RemoteState) {
   //if we have auth headers, this request matches our origin, protection space, and the user has not supplied auth headers
   return auth && !req.headers['authorization'] && cors.urlMatchesOriginProtectionSpace(req.proxiedUrl, origin)
-}
-
-const MaybeSetBasicAuthHeaders: RequestMiddleware = function () {
-  // get the remote state for the proxied url
-  const remoteState = this.remoteStates.get(this.req.proxiedUrl)
-
-  if (remoteState?.auth && reqNeedsBasicAuthHeaders(this.req, remoteState)) {
-    const { auth } = remoteState
-    const base64 = Buffer.from(`${auth.username}:${auth.password}`).toString('base64')
-
-    this.req.headers['authorization'] = `Basic ${base64}`
-  }
-
-  this.next()
 }
 
 const SendRequestOutgoing: RequestMiddleware = function () {
@@ -301,18 +301,18 @@ const SendRequestOutgoing: RequestMiddleware = function () {
 
 export default {
   LogRequest,
-  CorrelateBrowserPreRequest,
   ExtractCypressMetadataHeaders,
-  CalculateCredentialLevelIfApplicable,
   MaybeSimulateSecHeaders,
-  MaybeAttachCrossOriginCookies,
+  EndRequestsToBlockedHosts,
+  StripUnsupportedAcceptEncoding,
+  MaybeSetBasicAuthHeaders,
   MaybeEndRequestWithBufferedResponse,
+  CorrelateBrowserPreRequest,
+  CalculateCredentialLevelIfApplicable,
+  MaybeAttachCrossOriginCookies,
   SetMatchingRoutes,
   SendToDriver,
   InterceptRequest,
   RedirectToClientRouteIfUnloaded,
-  EndRequestsToBlockedHosts,
-  StripUnsupportedAcceptEncoding,
-  MaybeSetBasicAuthHeaders,
   SendRequestOutgoing,
 }
