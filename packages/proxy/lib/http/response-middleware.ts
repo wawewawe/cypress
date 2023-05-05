@@ -8,6 +8,7 @@ import { InterceptResponse } from '@packages/net-stubbing'
 import { concatStream, cors, httpUtils } from '@packages/network'
 import { toughCookieToAutomationCookie } from '@packages/server/lib/util/cookies'
 import { telemetry } from '@packages/telemetry'
+import { isVerboseTelemetry as isVerbose } from '.'
 import { CookiesHelper } from './util/cookies'
 import * as rewriter from './util/rewriter'
 import { doesTopNeedToBeSimulated } from './util/top-simulation'
@@ -153,7 +154,7 @@ const LogResponse: ResponseMiddleware = (ctx) => {
 
 const AttachPlainTextStreamFn: ResponseMiddleware = (ctx) => {
   ctx.makeResStreamPlainText = function () {
-    const span = telemetry.startSpan({ name: 'make:res:stream:plain:text', parentSpan: ctx.resMiddlewareSpan })
+    const span = telemetry.startSpan({ name: 'make:res:stream:plain:text', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
     ctx.debug('ensuring resStream is plaintext')
 
@@ -253,7 +254,7 @@ const PatchExpressSetHeader: ResponseMiddleware = (ctx) => {
 }
 
 const SetInjectionLevel: ResponseMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'set:injection:level', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'set:injection:level', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   ctx.res.isInitial = ctx.req.cookies['__cypress.initial'] === 'true'
 
@@ -368,7 +369,7 @@ const SetInjectionLevel: ResponseMiddleware = (ctx) => {
 
 // https://github.com/cypress-io/cypress/issues/6480
 const MaybeStripDocumentDomainFeaturePolicy: ResponseMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:strip:document:domain:feature:policy', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:strip:document:domain:feature:policy', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   const { 'feature-policy': featurePolicy } = ctx.incomingRes.headers
 
@@ -434,7 +435,7 @@ const setSimulatedCookies = (ctx: HttpMiddlewareThis<ResponseMiddlewareProps>) =
 }
 
 const MaybeCopyCookiesFromIncomingRes: ResponseMiddleware = async (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:copy:cookies:from:incoming:res', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:copy:cookies:from:incoming:res', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   const cookies: string | string[] | undefined = ctx.incomingRes.headers['set-cookie']
 
@@ -554,7 +555,7 @@ const REDIRECT_STATUS_CODES: any[] = [301, 302, 303, 307, 308]
 
 // TODO: this shouldn't really even be necessary?
 const MaybeSendRedirectToClient: ResponseMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:send:redirect:to:client', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:send:redirect:to:client', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   const { statusCode, headers } = ctx.incomingRes
   const newUrl = headers['location']
@@ -611,7 +612,7 @@ const MaybeEndWithEmptyBody: ResponseMiddleware = (ctx) => {
 }
 
 const MaybeInjectHtml: ResponseMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:inject:html', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:inject:html', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   // TODO: should be able to remove as implied with other top spans
   span?.setAttributes({
@@ -670,7 +671,7 @@ const MaybeInjectHtml: ResponseMiddleware = (ctx) => {
 }
 
 const MaybeRemoveSecurity: ResponseMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:remove:security', parentSpan: ctx.resMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:remove:security', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
   // TODO: should be able to remove as implied with other top spans
   span?.setAttributes({
@@ -709,7 +710,7 @@ const MaybeRemoveSecurity: ResponseMiddleware = (ctx) => {
 const GzipBody: ResponseMiddleware = (ctx) => {
   if (ctx.isGunzipped) {
     ctx.debug('regzipping response body')
-    const span = telemetry.startSpan({ name: 'gzip:body', parentSpan: ctx.resMiddlewareSpan })
+    const span = telemetry.startSpan({ name: 'gzip:body', parentSpan: ctx.resMiddlewareSpan, isVerbose })
 
     ctx.incomingResStream = ctx.incomingResStream
     .pipe(zlib.createGzip(zlibOptions))

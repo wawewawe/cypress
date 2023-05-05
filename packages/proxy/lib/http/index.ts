@@ -2,9 +2,10 @@ import Bluebird from 'bluebird'
 import chalk from 'chalk'
 import Debug from 'debug'
 import _ from 'lodash'
+import type { Span } from '@opentelemetry/api'
 import { errorUtils } from '@packages/errors'
 import { DeferredSourceMapCache } from '@packages/rewriter'
-import { telemetry, Span } from '@packages/telemetry'
+import { telemetry } from '@packages/telemetry'
 import ErrorMiddleware from './error-middleware'
 import RequestMiddleware from './request-middleware'
 import ResponseMiddleware from './response-middleware'
@@ -33,6 +34,8 @@ function getRandomColorFn () {
 }
 
 export const isVerboseTelemetry = true
+
+const isVerbose = isVerboseTelemetry
 
 export const debugVerbose = Debug('cypress-verbose:proxy:http')
 
@@ -109,7 +112,7 @@ export type HttpMiddlewareThis<T> = HttpMiddlewareCtx<T> & ServerCtx & Readonly<
    * Call to completely end the stage, bypassing any remaining middleware.
    */
   end: () => void
-  onResponse: (incomingRes: IncomingMessage, resStream: Readable, span?: Span) => void
+  onResponse: (incomingRes: IncomingMessage, resStream: Readable, spanCB?: () => void) => void
   onError: (error: Error) => void
   skipMiddleware: (name: string) => void
 }>
@@ -207,8 +210,8 @@ export function _runStage (type: HttpStages, ctx: any, onError: Function) {
           _end(runMiddlewareStack())
         },
         end: _end,
-        onResponse: (incomingRes: Response, resStream: Readable, span?: Span) => {
-          span?.end()
+        onResponse: (incomingRes: Response, resStream: Readable, spanCB?: () => void) => {
+          spanCB && spanCB()
 
           ctx.incomingRes = incomingRes
           ctx.incomingResStream = resStream
@@ -348,6 +351,7 @@ export class Http {
     ctx.reqMiddlewareSpan = telemetry.startSpan({
       name: 'request:middleware',
       parentSpan: handleHttpRequestSpan,
+      isVerbose,
     })
 
     return _runStage(HttpStages.IncomingRequest, ctx, onError)
@@ -363,6 +367,7 @@ export class Http {
         ctx.resMiddlewareSpan = telemetry.startSpan({
           name: 'response:middleware',
           parentSpan: handleHttpRequestSpan,
+          isVerbose,
         })
 
         return _runStage(HttpStages.IncomingResponse, ctx, onError)

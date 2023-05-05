@@ -1,8 +1,8 @@
 import _ from 'lodash'
-import { performance } from 'perf_hooks'
 import { InterceptRequest, SetMatchingRoutes } from '@packages/net-stubbing'
 import { blocked, cors } from '@packages/network'
 import { telemetry } from '@packages/telemetry'
+import { isVerboseTelemetry as isVerbose } from '.'
 import {
   addCookieJarCookiesToRequest, getSameSiteContext, shouldAttachAndSetCookies,
 } from './util/cookies'
@@ -28,7 +28,7 @@ const LogRequest: RequestMiddleware = (ctx) => {
 }
 
 const CorrelateBrowserPreRequest: RequestMiddleware = async (ctx) => {
-  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const shouldCorrelatePreRequests = ctx.shouldCorrelatePreRequests()
 
@@ -89,7 +89,7 @@ const CorrelateBrowserPreRequest: RequestMiddleware = async (ctx) => {
 }
 
 const ExtractCypressMetadataHeaders: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   ctx.req.isAUTFrame = !!ctx.req.headers['x-cypress-is-aut-frame']
 
@@ -107,7 +107,7 @@ const ExtractCypressMetadataHeaders: RequestMiddleware = (ctx) => {
 }
 
 const CalculateCredentialLevelIfApplicable: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'calculate:credential:level:if:applicable', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'calculate:credential:level:if:applicable', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const doesTopNeedSimulation = doesTopNeedToBeSimulated(ctx)
 
@@ -143,7 +143,7 @@ const CalculateCredentialLevelIfApplicable: RequestMiddleware = (ctx) => {
 }
 
 const MaybeSimulateSecHeaders: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:simulate:sec:headers', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:simulate:sec:headers', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   span?.setAttributes({
     experimentalModifyObstructiveThirdPartyCode: ctx.config.experimentalModifyObstructiveThirdPartyCode,
@@ -173,7 +173,7 @@ const MaybeSimulateSecHeaders: RequestMiddleware = (ctx) => {
 }
 
 const MaybeAttachCrossOriginCookies: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:attach:cross:origin:cookies', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:attach:cross:origin:cookies', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const doesTopNeedSimulation = doesTopNeedToBeSimulated(ctx)
 
@@ -262,7 +262,7 @@ function shouldLog (req: CypressIncomingRequest) {
 }
 
 const SendToDriver: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'send:to:driver', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'send:to:driver', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const shouldLogReq = shouldLog(ctx.req)
 
@@ -280,7 +280,7 @@ const SendToDriver: RequestMiddleware = (ctx) => {
 }
 
 const MaybeEndRequestWithBufferedResponse: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:end:with:buffered:response', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:end:with:buffered:response', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const buffer = ctx.buffers.take(ctx.req.proxiedUrl)
 
@@ -298,7 +298,10 @@ const MaybeEndRequestWithBufferedResponse: RequestMiddleware = (ctx) => {
       wantsInjection: ctx.res.wantsInjection,
     })
 
-    return ctx.onResponse(buffer.response, buffer.stream, span)
+    return ctx.onResponse(buffer.response, buffer.stream, () => {
+      span?.end()
+      ctx.reqMiddlewareSpan?.end()
+    })
   }
 
   span?.end()
@@ -306,7 +309,7 @@ const MaybeEndRequestWithBufferedResponse: RequestMiddleware = (ctx) => {
 }
 
 const RedirectToClientRouteIfUnloaded: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'redirect:to:client:route:if:unloaded', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'redirect:to:client:route:if:unloaded', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const hasAppUnloaded = ctx.req.cookies['__cypress.unload']
 
@@ -334,7 +337,7 @@ const RedirectToClientRouteIfUnloaded: RequestMiddleware = (ctx) => {
 }
 
 const EndRequestsToBlockedHosts: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'end:requests:to:block:hosts', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'end:requests:to:block:hosts', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   const { blockHosts } = ctx.config
 
@@ -366,7 +369,7 @@ const EndRequestsToBlockedHosts: RequestMiddleware = (ctx) => {
 }
 
 const StripUnsupportedAcceptEncoding: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'strip:unsupported:accept:encoding', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'strip:unsupported:accept:encoding', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   // Cypress can only support plaintext or gzip, so make sure we don't request anything else
   const acceptEncoding = ctx.req.headers['accept-encoding']
@@ -399,7 +402,7 @@ function reqNeedsBasicAuthHeaders (req, { auth, origin }: Cypress.RemoteState) {
 }
 
 const MaybeSetBasicAuthHeaders: RequestMiddleware = (ctx) => {
-  const span = telemetry.startSpan({ name: 'maybe:set:basic:auth:headers', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'maybe:set:basic:auth:headers', parentSpan: ctx.reqMiddlewareSpan, isVerbose })
 
   // get the remote state for the proxied url
   const remoteState = ctx.remoteStates.get(ctx.req.proxiedUrl)
@@ -430,6 +433,7 @@ const SendRequestOutgoing: RequestMiddleware = (ctx) => {
   const span = telemetry.startSpan({
     name: 'outgoing:request:ttfb',
     parentSpan: ctx.handleHttpRequestSpan,
+    isVerbose,
   })
 
   const requestOptions = {
@@ -503,7 +507,9 @@ const SendRequestOutgoing: RequestMiddleware = (ctx) => {
       // download and total are not available yet
     })
 
-    ctx.onResponse(incomingRes, req, span)
+    ctx.onResponse(incomingRes, req, () => {
+      span?.end()
+    })
   })
 
   // TODO: this is an odd place to remove this listener
@@ -522,13 +528,7 @@ const SendRequestOutgoing: RequestMiddleware = (ctx) => {
   ctx.outgoingReq = req
 }
 
-function timerify<T extends Record<string, RequestMiddleware>> (obj: T) {
-  return _.mapValues(obj, (fn, key) => {
-    return performance.timerify(fn)
-  }) as T
-}
-
-export default timerify({
+export default {
   LogRequest,
   CorrelateBrowserPreRequest,
   ExtractCypressMetadataHeaders,
@@ -544,4 +544,4 @@ export default timerify({
   StripUnsupportedAcceptEncoding,
   MaybeSetBasicAuthHeaders,
   SendRequestOutgoing,
-})
+}

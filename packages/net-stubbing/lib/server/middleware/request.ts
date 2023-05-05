@@ -19,7 +19,7 @@ import type {
 const debug = null
 
 export const SetMatchingRoutes: RequestMiddleware = async (ctx) => {
-  const span = telemetry.startSpan({ name: 'set:matching:routes', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'set:matching:routes', parentSpan: ctx.reqMiddlewareSpan, isVerbose: true })
 
   if (matchesRoutePreflight(ctx.netStubbingState.routes, ctx.req)) {
     // send positive CORS preflight response
@@ -45,7 +45,7 @@ export const SetMatchingRoutes: RequestMiddleware = async (ctx) => {
  * Called when a new request is received in the proxy layer.
  */
 export const InterceptRequest: RequestMiddleware = async (ctx) => {
-  const span = telemetry.startSpan({ name: 'intercept:request', parentSpan: ctx.reqMiddlewareSpan })
+  const span = telemetry.startSpan({ name: 'intercept:request', parentSpan: ctx.reqMiddlewareSpan, isVerbose: true })
 
   if (!ctx.req.matchingRoutes?.length) {
     // not intercepted, carry on normally...
