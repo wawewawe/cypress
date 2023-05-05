@@ -1,16 +1,15 @@
 import type { Span } from '@opentelemetry/api'
 import type { startSpanOptions, findActiveSpanOptions, contextObject } from './index'
-import {
-  envDetectorSync, hostDetectorSync, osDetectorSync, processDetectorSync,
-} from '@opentelemetry/resources'
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { Telemetry as TelemetryClass, TelemetryNoop } from './index'
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { envDetectorSync, processDetectorSync, osDetectorSync, hostDetectorSync } from '@opentelemetry/resources'
 import { circleCiDetectorSync } from './detectors/circleCiDetectorSync'
-import { enabledValues, Telemetry as TelemetryClass, TelemetryNoop } from './index'
-import { OTLPTraceExporter as OTLPTraceExporterCloud } from './span-exporters/cloud-span-exporter'
-import { OTLPTraceExporter as OTLPTraceExporterIpc } from './span-exporters/ipc-span-exporter'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
 
-export { OTLPTraceExporterIpc, OTLPTraceExporterCloud, Span }
+import { OTLPTraceExporter as OTLPTraceExporterIpc } from './span-exporters/ipc-span-exporter'
+import { OTLPTraceExporter as OTLPTraceExporterCloud } from './span-exporters/cloud-span-exporter'
+
+export { OTLPTraceExporterIpc, OTLPTraceExporterCloud }
 
 let telemetryInstance: TelemetryNoop | TelemetryClass = new TelemetryNoop
 
@@ -18,7 +17,7 @@ let telemetryInstance: TelemetryNoop | TelemetryClass = new TelemetryNoop
  * Provide a single place to check if telemetry should be enabled.
  * @returns boolean
  */
-const isEnabled = (): boolean => enabledValues.includes(process.env.CYPRESS_INTERNAL_ENABLE_TELEMETRY || '')
+const isEnabled = (): boolean => process.env.CYPRESS_INTERNAL_ENABLE_TELEMETRY === 'true'
 
 const isVerboseEnabled = (): boolean => process.env.CYPRESS_INTERNAL_ENABLE_TELEMETRY_VERBOSE === 'true'
 
