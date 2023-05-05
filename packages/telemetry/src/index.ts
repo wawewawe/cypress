@@ -1,13 +1,18 @@
+import openTelemetry from '@opentelemetry/api'
+import { detectResourcesSync, Resource } from '@opentelemetry/resources'
+import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-base'
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
+import { OnStartSpanProcessor } from './processors/on-start-span-processor'
+import { configureConsoleTraceLinkExporter } from './span-exporters/honeycomb-exporter'
+
 import type { Span, SpanOptions, Tracer, Context, Attributes } from '@opentelemetry/api'
 import type { BasicTracerProvider, SimpleSpanProcessor, BatchSpanProcessor, SpanExporter } from '@opentelemetry/sdk-trace-base'
 import type { DetectorSync } from '@opentelemetry/resources'
-
-import openTelemetry/*, { diag, DiagConsoleLogger, DiagLogLevel }*/ from '@opentelemetry/api'
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-base'
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
-import { Resource, detectResourcesSync } from '@opentelemetry/resources'
-
 const types = ['child', 'root'] as const
+
+export const enabledValues = ['true', '1']
+
+const SERVICE_NAME = 'cypress-app'
 
 type AttachType = typeof types[number];
 
@@ -57,7 +62,7 @@ export class Telemetry implements TelemetryApi {
     exporter,
     resources = {},
   }: {
-    namespace?: string
+    namespace: string
     Provider: typeof BasicTracerProvider
     detectors: DetectorSync[]
     rootContextObject?: contextObject
@@ -73,20 +78,32 @@ export class Telemetry implements TelemetryApi {
     const resource = Resource.default().merge(
       new Resource({
         ...resources,
-        [ SemanticResourceAttributes.SERVICE_NAME ]: 'cypress-app',
+        [ SemanticResourceAttributes.SERVICE_NAME ]: SERVICE_NAME,
         [ SemanticResourceAttributes.SERVICE_NAMESPACE ]: namespace,
         [ SemanticResourceAttributes.SERVICE_VERSION ]: version,
       }),
     )
 
     // Merge resources and create a new provider of the desired type.
-    this.provider = new Provider({ resource: resource.merge(detectResourcesSync({ detectors })) })
+    this.provider = new Provider({
+      resource: resource.merge(detectResourcesSync({ detectors })),
+    })
 
     // Setup the exporter
     this.provider.addSpanProcessor(new SpanProcessor(exporter))
 
+    // if local visualisations enabled, create composite exporter configured
+    // to send to both local exporter and main exporter
+    const honeyCombConsoleLinkExporter = configureConsoleTraceLinkExporter({
+      serviceName: SERVICE_NAME,
+      tracesApiKey: 'lPPfWKSfzfyVTxoxxVsbQV',
+      team: 'bill-individual',
+      environment: 'dev',
+    })
+
+    this.provider.addSpanProcessor(new OnStartSpanProcessor(honeyCombConsoleLinkExporter))
     // if enabled, set up the console exporter.
-    if (process.env.CYPRESS_INTERNAL_USE_CONSOLE_EXPORTER === 'true') {
+    if (enabledValues.includes(process.env.CYPRESS_INTERNAL_USE_CONSOLE_EXPORTER || '')) {
       const consoleExporter = new ConsoleSpanExporter()
 
       this.provider.addSpanProcessor(new SpanProcessor(consoleExporter))
@@ -100,10 +117,10 @@ export class Telemetry implements TelemetryApi {
 
     this.setRootContext(rootContextObject)
 
-    // store off the root context to apply to new spans
-    if (rootContextObject && rootContextObject.traceparent) {
-      this.rootContext = openTelemetry.propagation.extract(openTelemetry.context.active(), rootContextObject)
-    }
+    // // store off the root context to apply to new spans
+    // if (rootContextObject && rootContextObject.traceparent) {
+    //   this.rootContext = openTelemetry.propagation.extract(openTelemetry.context.active(), rootContextObject)
+    // }
 
     this.spans = {}
     this.activeSpanQueue = []
@@ -138,6 +155,10 @@ export class Telemetry implements TelemetryApi {
 
       // Start span with parent context.
       span = this.tracer.startSpan(name, opts, ctx)
+
+      // @ts-ignore
+      span.setAttributes(parentSpan.attributes)
+
       // If root or implied root
     } else if (attachType === 'root' || this.activeSpanQueue.length < 1) {
       if (this.rootContext) {
