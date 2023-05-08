@@ -325,15 +325,15 @@ export class ProjectBase<TServer extends Server> extends EE {
       projectRoot,
     })
 
-    const onBrowserPreRequest = (browserPreRequest) => {
-      this.server.addBrowserPreRequest(browserPreRequest)
-    }
+    // const onBrowserPreRequest = (browserPreRequest) => {
+    //   this.server.addBrowserPreRequest(browserPreRequest)
+    // }
 
     const onRequestEvent = (eventName, data) => {
       this.server.emitRequestEvent(eventName, data)
     }
 
-    this._automation = new Automation(namespace, socketIoCookie, screenshotsFolder, onBrowserPreRequest, onRequestEvent)
+    this._automation = new Automation(namespace, socketIoCookie, screenshotsFolder, onRequestEvent)
 
     const io = this.server.startWebsockets(this.automation, this.cfg, {
       onReloadBrowser: options.onReloadBrowser,

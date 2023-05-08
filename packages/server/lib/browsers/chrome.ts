@@ -12,7 +12,7 @@ import type { Protocol } from 'devtools-protocol'
 
 import appData from '../util/app_data'
 import { fs } from '../util/fs'
-import { CdpAutomation, normalizeResourceType, screencastOpts } from './cdp_automation'
+import { CdpAutomation, screencastOpts } from './cdp_automation'
 import * as protocol from './protocol'
 import utils from './utils'
 import * as errors from '../errors'
@@ -22,6 +22,7 @@ import type { CriClient } from './cri-client'
 import type { Automation } from '../automation'
 import type { BrowserLaunchOpts, BrowserNewTabOpts, RunModeVideoApi } from '@packages/types'
 import memory from './memory'
+import { normalizeResourceType } from '../automation/util'
 
 const debug = debugModule('cypress:server:browsers:chrome')
 
@@ -408,18 +409,31 @@ const _handlePausedRequests = async (client) => {
   // adds a header to the request to mark it as a request for the AUT frame
   // itself, so the proxy can utilize that for injection purposes
   client.on('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
+    if (params.request.url.includes('set-cookie')) {
+      debugger
+    }
+
+    if (params.request.url.includes('test-request')) {
+      debugger
+    }
+
     const addedHeaders: {
       name: string
       value: string
-    }[] = [{
-      name: 'X-Cypress-Request-Id',
-      // maps to request ID in respons ereceived
-      value: params.networkId,
-    },
-    {
-      name: 'X-Cypress-Resource-Type',
-      value: normalizeResourceType(params.resourceType),
-    }]
+    }[] = [
+      {
+        name: 'X-Cypress-Resource-Type',
+        value: normalizeResourceType(params.resourceType),
+      },
+    ]
+
+    if (params.networkId) {
+      addedHeaders.push({
+        name: 'X-Cypress-Request-Id',
+        // maps to request ID in response received
+        value: params.networkId,
+      })
+    }
     // const browserPreRequest: BrowserPreRequest = {
     //   requestId: params.requestId,
     //   method: params.request.method,
@@ -437,7 +451,7 @@ const _handlePausedRequests = async (client) => {
       })
     }
 
-    return _continueRequest(client, params)
+    return _continueRequest(client, params, addedHeaders)
   })
 }
 

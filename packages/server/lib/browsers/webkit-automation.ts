@@ -226,7 +226,7 @@ export class WebKitAutomation {
       }
 
       debug('received request %o', { browserPreRequest })
-      this.automation.onBrowserPreRequest?.(browserPreRequest)
+      // this.automation.onBrowserPreRequest?.(browserPreRequest)
     })
 
     this.page.on('requestfinished', async (request) => {

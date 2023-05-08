@@ -88,6 +88,7 @@ const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
   //   copyResourceTypeAndNext()
   // }))
 
+  // NOTE: currently no-op the prerequest behavior
   this.next()
 }
 

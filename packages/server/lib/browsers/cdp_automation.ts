@@ -132,13 +132,13 @@ type OnFn = <T extends CdpEvent>(eventName: T, cb: (data: ProtocolMapping.Events
 export class CdpAutomation {
   private constructor (private sendDebuggerCommandFn: SendDebuggerCommand, private onFn: OnFn, private sendCloseCommandFn: SendCloseCommand, private automation: Automation) {
     // onFn('Network.requestWillBeSent', this.onNetworkRequestWillBeSent)
-    // onFn('Network.responseReceived', this.onResponseReceived)
-    onFn('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
-      // works in electron and chromium browsers, but not firefox.
-      // see https://bugzilla.mozilla.org/show_bug.cgi?id=1591389
-      console.log(JSON.stringify(params))
-      sendDebuggerCommandFn('Fetch.continueRequest', params)
-    })
+    onFn('Network.responseReceived', this.onResponseReceived)
+    // onFn('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
+    //   // works in electron and chromium browsers, but not firefox.
+    //   // see https://bugzilla.mozilla.org/show_bug.cgi?id=1591389
+    //   console.log(JSON.stringify(params))
+    //   sendDebuggerCommandFn('Fetch.continueRequest', params)
+    // })
   }
 
   async startVideoRecording (writeVideoFrame: WriteVideoFrame, screencastOpts) {
@@ -159,40 +159,38 @@ export class CdpAutomation {
       maxPostDataSize: 0,
     })
 
-    // await sendDebuggerCommandFn('Fetch.enable')
-
     return cdpAutomation
   }
 
-  private onNetworkRequestWillBeSent = (params: Protocol.Network.RequestWillBeSentEvent) => {
-    debugVerbose('received networkRequestWillBeSent %o', params)
-    let url = params.request.url
+  // private onNetworkRequestWillBeSent = (params: Protocol.Network.RequestWillBeSentEvent) => {
+  //   debugVerbose('received networkRequestWillBeSent %o', params)
+  //   let url = params.request.url
 
-    // in Firefox, the hash is incorrectly included in the URL: https://bugzilla.mozilla.org/show_bug.cgi?id=1715366
-    if (url.includes('#')) url = url.slice(0, url.indexOf('#'))
+  //   // in Firefox, the hash is incorrectly included in the URL: https://bugzilla.mozilla.org/show_bug.cgi?id=1715366
+  //   if (url.includes('#')) url = url.slice(0, url.indexOf('#'))
 
-    // Filter out "data:" urls from being cached - fixes: https://github.com/cypress-io/cypress/issues/17853
-    // Chrome sends `Network.requestWillBeSent` events with data urls which won't actually be fetched
-    // Example data url: "data:font/woff;base64,<base64 encoded string>"
-    if (url.startsWith('data:')) {
-      debugVerbose('skipping `data:` url %s', url)
+  //   // Filter out "data:" urls from being cached - fixes: https://github.com/cypress-io/cypress/issues/17853
+  //   // Chrome sends `Network.requestWillBeSent` events with data urls which won't actually be fetched
+  //   // Example data url: "data:font/woff;base64,<base64 encoded string>"
+  //   if (url.startsWith('data:')) {
+  //     debugVerbose('skipping `data:` url %s', url)
 
-      return
-    }
+  //     return
+  //   }
 
-    // Firefox: https://searchfox.org/mozilla-central/rev/98a9257ca2847fad9a19631ac76199474516b31e/remote/cdp/domains/parent/Network.jsm#397
-    // Firefox lacks support for urlFragment and initiator, two nice-to-haves
-    const browserPreRequest: BrowserPreRequest = {
-      requestId: params.requestId,
-      method: params.request.method,
-      url,
-      headers: params.request.headers,
-      resourceType: normalizeResourceType(params.type),
-      originalResourceType: params.type,
-    }
+  //   // Firefox: https://searchfox.org/mozilla-central/rev/98a9257ca2847fad9a19631ac76199474516b31e/remote/cdp/domains/parent/Network.jsm#397
+  //   // Firefox lacks support for urlFragment and initiator, two nice-to-haves
+  //   const browserPreRequest: BrowserPreRequest = {
+  //     requestId: params.requestId,
+  //     method: params.request.method,
+  //     url,
+  //     headers: params.request.headers,
+  //     resourceType: normalizeResourceType(params.type),
+  //     originalResourceType: params.type,
+  //   }
 
-    this.automation.onBrowserPreRequest?.(browserPreRequest)
-  }
+  //   this.automation.onBrowserPreRequest?.(browserPreRequest)
+  // }
 
   private onResponseReceived = (params: Protocol.Network.ResponseReceivedEvent) => {
     const browserResponseReceived: BrowserResponseReceived = {

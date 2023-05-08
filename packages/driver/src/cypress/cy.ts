@@ -2,6 +2,8 @@
 import _ from 'lodash'
 import Promise from 'bluebird'
 import debugFn from 'debug'
+// import { patchFetch } from '@packages/runner/injection/patches/fetch'
+// import { patchXmlHttpRequest } from '@packages/runner/injection/patches/xmlHttpRequest'
 
 import $utils from './utils'
 import $errUtils, { ErrorFromProjectRejectionEvent } from './error_utils'
@@ -466,6 +468,10 @@ export class $Cy extends EventEmitter2 implements ITimeouts, IStability, IAssert
     // so we can tap into all the normal flow of events
     // like before:unload, navigation events, etc
     this.contentWindowListeners(getContentWindow($autIframe))
+
+    // debugger
+    // patchFetch(getContentWindow($autIframe))
+    // patchXmlHttpRequest(getContentWindow($autIframe))
 
     // the load event comes from the autIframe anytime any window
     // inside of it loads.
