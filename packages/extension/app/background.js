@@ -4,7 +4,7 @@ const pick = require('lodash/pick')
 const once = require('lodash/once')
 const Promise = require('bluebird')
 const browser = require('webextension-polyfill')
-const { cookieMatches } = require('@packages/server/lib/automation/util')
+const { cookieMatches, normalizeResourceType } = require('@packages/server/lib/automation/util')
 
 const client = require('./client')
 const util = require('../lib/util')
@@ -59,29 +59,69 @@ const connect = function (host, path, extraOpts) {
     })
   })
 
-  // TODO: why does this not bounce for type other? debug the extension
   const listenToOnBeforeHeaders = once(() => {
     // adds a header to the request to mark it as a request for the AUT frame
     // itself, so the proxy can utilize that for injection purposes
     browser.webRequest.onBeforeSendHeaders.addListener((details) => {
+      const requestModifications = {
+        requestHeaders: [
+          ...(details.requestHeaders || []),
+          {
+            name: 'X-Cypress-Request-Id',
+            // maps to request ID in onCompleted/onErrorOccurred
+            value: details.requestId,
+          },
+          {
+            name: 'X-Cypress-Resource-Type',
+            value: normalizeResourceType(details.type),
+          },
+        ],
+      }
+
       if (
         // parentFrameId: 0 means the parent is the top-level, so if it isn't
         // 0, it's nested inside the AUT and can't be the AUT itself
         details.parentFrameId !== 0
+        // isn't an iframe
+        || details.type !== 'sub_frame'
         // is the spec frame, not the AUT
         || details.url.includes('__cypress')
-      ) return
+      ) return requestModifications
 
       return {
         requestHeaders: [
-          ...details.requestHeaders,
+          ...requestModifications.requestHeaders,
           {
             name: 'X-Cypress-Is-AUT-Frame',
             value: 'true',
           },
         ],
       }
-    }, { urls: ['<all_urls>'], types: ['sub_frame'] }, ['blocking', 'requestHeaders'])
+    }, { urls: ['<all_urls>'] }, ['blocking', 'requestHeaders'])
+
+    // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/onCompleted
+    browser.webRequest.onCompleted.addListener((details) => {
+      // emits to the socket-base, which in turn sends this down to the driver to update the command-log that the request has completed
+      ws.emit('backend:request', 'firefox:request:completed', {
+        requestId: details.requestId,
+        status: details.statusCode,
+      }, () => undefined)
+    }, { urls: ['<all_urls>'] })
+
+    // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/onErrorOccurred
+    browser.webRequest.onErrorOccurred.addListener((details) => {
+      // emits to the socket-base, which in turn sends this down to the driver to update the command-log that the request has errored
+      ws.emit('backend:request', 'firefox:request:error', {
+        requestId: details.requestId,
+        status: details.statusCode,
+      }, () => undefined)
+    }, { urls: ['<all_urls>'] })
+
+    // this.socket.toDriver('request:event', 'response:received', {
+    //   requestId,
+    //   headers: this.res.getHeaders(),
+    //   status: this.res.statusCode,
+    // })
   })
 
   const fail = (id, err) => {

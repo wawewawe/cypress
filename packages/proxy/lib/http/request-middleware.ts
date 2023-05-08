@@ -28,79 +28,106 @@ const LogRequest: RequestMiddleware = function () {
 }
 
 const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
-  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan, isVerbose })
+  // const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
-  const shouldCorrelatePreRequests = this.shouldCorrelatePreRequests()
+  // const shouldCorrelatePreRequests = this.shouldCorrelatePreRequests()
 
-  span?.setAttributes({
-    shouldCorrelatePreRequest: shouldCorrelatePreRequests,
-    url: this.req.proxiedUrl,
-  })
+  // span?.setAttributes({
+  //   shouldCorrelatePreRequest: shouldCorrelatePreRequests,
+  //   url: this.req.proxiedUrl,
+  // })
 
-  if (!this.shouldCorrelatePreRequests()) {
-    span?.end()
+  // if (!this.shouldCorrelatePreRequests()) {
+  //   span?.end()
 
-    return this.next()
-  }
+  //   return this.next()
+  // }
 
-  const copyResourceTypeAndNext = () => {
-    this.req.resourceType = this.req.browserPreRequest?.resourceType
+  // const copyResourceTypeAndNext = () => {
+  //   this.req.resourceType = this.req.browserPreRequest?.resourceType
 
-    span?.setAttributes({
-      resourceType: this.req.resourceType,
-    })
+  //   span?.setAttributes({
+  //     resourceType: this.req.resourceType,
+  //   })
 
-    span?.end()
+  //   span?.end()
 
-    return this.next()
-  }
+  //   return this.next()
+  // }
 
-  if (this.req.headers['x-cypress-resolving-url']) {
-    this.debug('skipping prerequest for resolve:url')
-    delete this.req.headers['x-cypress-resolving-url']
-    const requestId = `cy.visit-${Date.now()}`
+  // if (this.req.headers['x-cypress-resolving-url']) {
+  //   this.debug('skipping prerequest for resolve:url')
+  //   delete this.req.headers['x-cypress-resolving-url']
+  //   const requestId = `cy.visit-${Date.now()}`
 
-    this.req.browserPreRequest = {
-      requestId,
-      method: this.req.method,
-      url: this.req.proxiedUrl,
-      // @ts-ignore
-      headers: this.req.headers,
-      resourceType: 'document',
-      originalResourceType: 'document',
-    }
+  //   this.req.browserPreRequest = {
+  //     requestId,
+  //     method: this.req.method,
+  //     url: this.req.proxiedUrl,
+  //     // @ts-ignore
+  //     headers: this.req.headers,
+  //     resourceType: 'document',
+  //     originalResourceType: 'document',
+  //   }
 
-    this.res.on('close', () => {
-      this.socket.toDriver('request:event', 'response:received', {
-        requestId,
-        headers: this.res.getHeaders(),
-        status: this.res.statusCode,
-      })
-    })
+  //   this.res.on('close', () => {
+  //     this.socket.toDriver('request:event', 'response:received', {
+  //       requestId,
+  //       headers: this.res.getHeaders(),
+  //       status: this.res.statusCode,
+  //     })
+  //   })
 
-    return copyResourceTypeAndNext()
-  }
+  //   return copyResourceTypeAndNext()
+  // }
 
-  this.debug('waiting for prerequest')
+  // this.debug('waiting for prerequest')
 
-  this.getPreRequest(((browserPreRequest) => {
-    this.req.browserPreRequest = browserPreRequest
-    copyResourceTypeAndNext()
-  }))
+  // this.getPreRequest(((browserPreRequest) => {
+  //   this.req.browserPreRequest = browserPreRequest
+  //   copyResourceTypeAndNext()
+  // }))
+
+  this.next()
 }
 
 const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
   const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
-
-  span?.setAttributes({
-    isAUTFrame: this.req.isAUTFrame,
-  })
+  // @ts-ignore
+  this.req.resourceType = this.req.headers['x-cypress-resource-type']
+  // @ts-ignore
+  this.req.requestId = this.req.headers['x-cypress-request-id']
 
   if (this.req.headers['x-cypress-is-aut-frame']) {
     delete this.req.headers['x-cypress-is-aut-frame']
   }
+
+  if (this.req.headers['x-cypress-resource-type']) {
+    delete this.req.headers['x-cypress-resource-type']
+  }
+
+  if (this.req.headers['x-cypress-request-id']) {
+    delete this.req.headers['x-cypress-request-id']
+  }
+
+  if (this.req.requestId) {
+    // TODO: manually build the prerequest (name change coming later) in order to associate proxied logs in the app
+    this.req.browserPreRequest = {
+      requestId: this.req.requestId,
+      method: this.req.method,
+      url: this.req.proxiedUrl,
+      // @ts-ignore
+      headers: this.req.headers,
+      // @ts-ignore
+      resourceType: this.req.resourceType,
+    }
+  }
+
+  span?.setAttributes({
+    isAUTFrame: this.req.isAUTFrame,
+  })
 
   span?.end()
 

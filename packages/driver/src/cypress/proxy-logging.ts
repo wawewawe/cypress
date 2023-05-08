@@ -58,6 +58,8 @@ function getRequestLogConfig (req: Omit<ProxyRequest, 'log'>): Partial<Cypress.I
     return
   }
 
+  debugger
+
   return {
     ...getDynamicRequestLogConfig(req),
     displayName: req.preRequest.resourceType,
@@ -214,6 +216,7 @@ export default class ProxyLogging {
 
   constructor (private Cypress: Cypress.Cypress) {
     Cypress.on('request:event', (eventName, data) => {
+      debugger
       switch (eventName) {
         case 'incoming:request':
           return this.logIncomingRequest(data)

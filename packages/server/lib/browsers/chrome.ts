@@ -12,7 +12,7 @@ import type { Protocol } from 'devtools-protocol'
 
 import appData from '../util/app_data'
 import { fs } from '../util/fs'
-import { CdpAutomation, screencastOpts } from './cdp_automation'
+import { CdpAutomation, normalizeResourceType, screencastOpts } from './cdp_automation'
 import * as protocol from './protocol'
 import utils from './utils'
 import * as errors from '../errors'
@@ -347,19 +347,19 @@ const _listenForFrameTreeChanges = (client) => {
   client.on('Page.frameDetached', _updateFrameTree(client, 'Page.frameDetached'))
 }
 
-const _continueRequest = (client, params, header?) => {
+const _continueRequest = (client, params, headers?) => {
   const details: Protocol.Fetch.ContinueRequestRequest = {
     requestId: params.requestId,
   }
 
-  if (header) {
+  if (headers && headers.length) {
     // headers are received as an object but need to be an array
     // to modify them
     const currentHeaders = _.map(params.request.headers, (value, name) => ({ name, value }))
 
     details.headers = [
       ...currentHeaders,
-      header,
+      ...headers,
     ]
   }
 
@@ -403,20 +403,35 @@ const _isAUTFrame = async (frameId: string) => {
 }
 
 const _handlePausedRequests = async (client) => {
-  await client.send('Fetch.enable', {
-    // only enable request pausing for documents
-    patterns: [{
-      resourceType: 'Document',
-    }],
-  })
+  await client.send('Fetch.enable')
 
   // adds a header to the request to mark it as a request for the AUT frame
   // itself, so the proxy can utilize that for injection purposes
   client.on('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
+    const addedHeaders: {
+      name: string
+      value: string
+    }[] = [{
+      name: 'X-Cypress-Request-Id',
+      // maps to request ID in respons ereceived
+      value: params.networkId,
+    },
+    {
+      name: 'X-Cypress-Resource-Type',
+      value: normalizeResourceType(params.resourceType),
+    }]
+    // const browserPreRequest: BrowserPreRequest = {
+    //   requestId: params.requestId,
+    //   method: params.request.method,
+    //   url,
+    //   headers: params.request.headers,
+    //   resourceType: normalizeResourceType(params.type),
+    //   originalResourceType: params.type,
+    // }
+
     if (await _isAUTFrame(params.frameId)) {
       debug('add X-Cypress-Is-AUT-Frame header to: %s', params.request.url)
-
-      return _continueRequest(client, params, {
+      addedHeaders.push({
         name: 'X-Cypress-Is-AUT-Frame',
         value: 'true',
       })

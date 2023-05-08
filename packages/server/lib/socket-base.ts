@@ -409,6 +409,12 @@ export class SocketBase {
               return firefoxUtil.log()
             case 'firefox:force:gc':
               return firefoxUtil.collectGarbage()
+            case 'firefox:request:completed':
+              // TODO: send to the Driver the request deets!
+              return this.toDriver('request:event', 'response:received', args[0])
+            case 'firefox:request:error':
+              // TODO: send to the Driver the request deets!
+              return this.toDriver('request:event', 'request:error', args[0])
             case 'get:fixture':
               return getFixture(args[0], args[1])
             case 'read:file':

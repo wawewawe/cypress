@@ -170,6 +170,7 @@ export class WebKitAutomation {
     }
 
     await this.context.route('**', (route, request) => {
+      // TODO: can we do it here for playwright?
       if (!isAutIframeRequest(request)) return route.continue()
 
       return route.continue({

@@ -8,10 +8,10 @@ import { cors, uri } from '@packages/network'
 import debugModule from 'debug'
 import { URL } from 'url'
 
-import type { ResourceType, BrowserPreRequest, BrowserResponseReceived } from '@packages/proxy'
+import type { BrowserPreRequest, BrowserResponseReceived } from '@packages/proxy'
 import type { WriteVideoFrame } from '@packages/types'
 import type { Automation } from '../automation'
-import { cookieMatches, CyCookie, CyCookieFilter } from '../automation/util'
+import { cookieMatches, CyCookie, CyCookieFilter, normalizeResourceType } from '../automation/util'
 
 export type CdpCommand = keyof ProtocolMapping.Commands
 
@@ -125,37 +125,20 @@ const normalizeSetCookieProps = (cookie: CyCookie): Protocol.Network.SetCookieRe
   return setCookieRequest
 }
 
-export const normalizeResourceType = (resourceType: string | undefined): ResourceType => {
-  resourceType = resourceType ? resourceType.toLowerCase() : 'unknown'
-  if (validResourceTypes.includes(resourceType as ResourceType)) {
-    return resourceType as ResourceType
-  }
-
-  if (resourceType === 'img') {
-    return 'image'
-  }
-
-  return ffToStandardResourceTypeMap[resourceType] || 'other'
-}
-
 type SendDebuggerCommand = <T extends CdpCommand>(message: T, data?: any) => Promise<ProtocolMapping.Commands[T]['returnType']>
 type SendCloseCommand = (shouldKeepTabOpen: boolean) => Promise<any> | void
 type OnFn = <T extends CdpEvent>(eventName: T, cb: (data: ProtocolMapping.Events[T][0]) => void) => void
 
-// the intersection of what's valid in CDP and what's valid in FFCDP
-// Firefox: https://searchfox.org/mozilla-central/rev/98a9257ca2847fad9a19631ac76199474516b31e/remote/cdp/domains/parent/Network.jsm#22
-// CDP: https://chromedevtools.github.io/devtools-protocol/tot/Network/#type-ResourceType
-const validResourceTypes: ResourceType[] = ['fetch', 'xhr', 'websocket', 'stylesheet', 'script', 'image', 'font', 'cspviolationreport', 'ping', 'manifest', 'other']
-const ffToStandardResourceTypeMap: { [ff: string]: ResourceType } = {
-  'img': 'image',
-  'csp': 'cspviolationreport',
-  'webmanifest': 'manifest',
-}
-
 export class CdpAutomation {
   private constructor (private sendDebuggerCommandFn: SendDebuggerCommand, private onFn: OnFn, private sendCloseCommandFn: SendCloseCommand, private automation: Automation) {
-    onFn('Network.requestWillBeSent', this.onNetworkRequestWillBeSent)
-    onFn('Network.responseReceived', this.onResponseReceived)
+    // onFn('Network.requestWillBeSent', this.onNetworkRequestWillBeSent)
+    // onFn('Network.responseReceived', this.onResponseReceived)
+    onFn('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
+      // works in electron and chromium browsers, but not firefox.
+      // see https://bugzilla.mozilla.org/show_bug.cgi?id=1591389
+      console.log(JSON.stringify(params))
+      sendDebuggerCommandFn('Fetch.continueRequest', params)
+    })
   }
 
   async startVideoRecording (writeVideoFrame: WriteVideoFrame, screencastOpts) {
@@ -175,6 +158,8 @@ export class CdpAutomation {
       maxResourceBufferSize: 0,
       maxPostDataSize: 0,
     })
+
+    // await sendDebuggerCommandFn('Fetch.enable')
 
     return cdpAutomation
   }
