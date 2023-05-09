@@ -158,8 +158,8 @@ const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
 
   this.debug(`credentials calculated for ${resourceType}:${credentialStatus}`)
 
-  // if for some reason the resourceType is not set, have a fallback in place
-  this.req.resourceType = !this.req.resourceType ? resourceType : this.req.resourceType
+  // if for some reason the resourceType is not set or is incorrect (in the case of fetch where CDP/extension say xhr), re assign it
+  this.req.resourceType = resourceType
   this.req.credentialsLevel = credentialStatus
 
   span?.setAttributes({

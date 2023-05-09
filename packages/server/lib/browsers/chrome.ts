@@ -409,31 +409,18 @@ const _handlePausedRequests = async (client) => {
   // adds a header to the request to mark it as a request for the AUT frame
   // itself, so the proxy can utilize that for injection purposes
   client.on('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
-    if (params.request.url.includes('set-cookie')) {
-      debugger
-    }
-
-    if (params.request.url.includes('test-request')) {
-      debugger
-    }
-
     const addedHeaders: {
       name: string
       value: string
-    }[] = [
-      {
-        name: 'X-Cypress-Resource-Type',
-        value: normalizeResourceType(params.resourceType),
-      },
-    ]
-
-    if (params.networkId) {
-      addedHeaders.push({
-        name: 'X-Cypress-Request-Id',
-        // maps to request ID in response received
-        value: params.networkId,
-      })
-    }
+    }[] = [{
+      name: 'X-Cypress-Request-Id',
+      // maps to request ID in respons ereceived
+      value: params.networkId,
+    },
+    {
+      name: 'X-Cypress-Resource-Type',
+      value: normalizeResourceType(params.resourceType),
+    }]
     // const browserPreRequest: BrowserPreRequest = {
     //   requestId: params.requestId,
     //   method: params.request.method,
@@ -443,7 +430,7 @@ const _handlePausedRequests = async (client) => {
     //   originalResourceType: params.type,
     // }
 
-    if (await _isAUTFrame(params.frameId)) {
+    if (params.resourceType === 'Document' && await _isAUTFrame(params.frameId)) {
       debug('add X-Cypress-Is-AUT-Frame header to: %s', params.request.url)
       addedHeaders.push({
         name: 'X-Cypress-Is-AUT-Frame',
