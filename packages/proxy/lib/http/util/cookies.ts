@@ -12,7 +12,7 @@ interface RequestDetails {
   url: string
   isAUTFrame: boolean
   doesTopNeedSimulating: boolean
-  requestedWith?: RequestedWithHeader
+  resourceType?: RequestedWithHeader
   credentialLevel?: RequestCredentialLevel
 }
 
@@ -29,12 +29,12 @@ interface RequestDetails {
  * @param {isAutFrame} [boolean] - whether or not the request is from the AUT Iframe or not
  * @returns {boolean}
  */
-export const shouldAttachAndSetCookies = (requestUrl: string, AUTUrl: string | undefined, requestedWith?: RequestedWithHeader, credentialLevel?: RequestCredentialLevel, isAutFrame?: boolean): boolean => {
+export const shouldAttachAndSetCookies = (requestUrl: string, AUTUrl: string | undefined, resourceType?: RequestedWithHeader, credentialLevel?: RequestCredentialLevel, isAutFrame?: boolean): boolean => {
   if (!AUTUrl) return false
 
   const siteContext = calculateSiteContext(requestUrl, AUTUrl)
 
-  switch (requestedWith) {
+  switch (resourceType) {
     case 'fetch':
       // never attach cookies regardless of siteContext if omit is optioned
       if (credentialLevel === 'omit') {
@@ -220,7 +220,9 @@ export class CookiesHelper {
     // cross site cookies cannot set lax/strict cookies in the browser for xhr/fetch requests (but ok with navigation/document requests)
     // NOTE: This is allowable in firefox as the default cookie behavior is no_restriction (none). However, this shouldn't
     // impact what is happening in the server-side cookie jar as Set-Cookie is still called and firefox will allow it to be set in the browser
-    if (this.request.requestedWith && this.siteContext === 'cross-site' && toughCookie.sameSite !== 'none') {
+    const isXhrOrFetchRequest = this.request.resourceType === 'fetch' || this.request.resourceType === 'xhr'
+
+    if (isXhrOrFetchRequest && this.siteContext === 'cross-site' && toughCookie.sameSite !== 'none') {
       this.debug(`cannot set cookie with SameSite=${toughCookie.sameSite} when site context is ${this.siteContext}`)
 
       return
@@ -228,10 +230,10 @@ export class CookiesHelper {
 
     // don't set the cookie in our own cookie jar if the cookie would otherwise fail being set in the browser if the AUT Url
     // was actually top. This prevents cookies from being applied to our cookie jar when they shouldn't, preventing possible security implications.
-    const shouldSetCookieGivenSiteContext = shouldAttachAndSetCookies(this.request.url, this.currentAUTUrl, this.request.requestedWith, this.request.credentialLevel, this.request.isAUTFrame)
+    const shouldSetCookieGivenSiteContext = shouldAttachAndSetCookies(this.request.url, this.currentAUTUrl, this.request.resourceType, this.request.credentialLevel, this.request.isAUTFrame)
 
     if (!shouldSetCookieGivenSiteContext) {
-      this.debug(`not setting cookie for ${this.request.url} with simulated top ${ this.currentAUTUrl} for ${ this.request.requestedWith}:${this.request.credentialLevel}, cookie: ${toughCookie}`)
+      this.debug(`not setting cookie for ${this.request.url} with simulated top ${ this.currentAUTUrl} for ${ this.request.resourceType}:${this.request.credentialLevel}, cookie: ${toughCookie}`)
 
       return
     }

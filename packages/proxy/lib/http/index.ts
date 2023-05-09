@@ -9,14 +9,14 @@ import ErrorMiddleware from './error-middleware'
 import RequestMiddleware from './request-middleware'
 import ResponseMiddleware from './response-middleware'
 import { HttpBuffers } from './util/buffers'
-import { GetPreRequestCb, PreRequests } from './util/prerequests'
+// import { GetPreRequestCb, PreRequests } from './util/prerequests'
 
 import type EventEmitter from 'events'
 import type CyServer from '@packages/server'
 import type {
   CypressIncomingRequest,
   CypressOutgoingResponse,
-  BrowserPreRequest,
+  // BrowserPreRequest,
 } from '@packages/proxy'
 import type { IncomingMessage } from 'http'
 import type { NetStubbingState } from '@packages/net-stubbing'
@@ -58,13 +58,13 @@ type HttpMiddlewareCtx<T> = {
   handleHttpRequestSpan?: Span
   reqMiddlewareSpan?: Span
   resMiddlewareSpan?: Span
-  shouldCorrelatePreRequests: () => boolean
+  // shouldCorrelatePreRequests: () => boolean
   stage: HttpStages
   debug: Debug.Debugger
   middleware: HttpMiddlewareStacks
   getCookieJar: () => CookieJar
   deferSourceMapRewrite: (opts: { js: string, url: string }) => string
-  getPreRequest: (cb: GetPreRequestCb) => void
+  // getPreRequest: (cb: GetPreRequestCb) => void
   getAUTUrl: Http['getAUTUrl']
   setAUTUrl: Http['setAUTUrl']
   simulatedCookies: SerializableAutomationCookie[]
@@ -78,7 +78,7 @@ export const defaultMiddleware = {
 
 export type ServerCtx = Readonly<{
   config: CyServer.Config & Cypress.Config
-  shouldCorrelatePreRequests?: () => boolean
+  // shouldCorrelatePreRequests?: () => boolean
   getFileServerToken: () => string | undefined
   getCookieJar: () => CookieJar
   remoteStates: RemoteStates
@@ -251,13 +251,13 @@ function getUniqueRequestId (requestId: string) {
 export class Http {
   buffers: HttpBuffers
   config: CyServer.Config
-  shouldCorrelatePreRequests: () => boolean
+  // shouldCorrelatePreRequests: () => boolean
   deferredSourceMapCache: DeferredSourceMapCache
   getFileServerToken: () => string | undefined
   remoteStates: RemoteStates
   middleware: HttpMiddlewareStacks
   netStubbingState: NetStubbingState
-  preRequests: PreRequests = new PreRequests()
+  // preRequests: PreRequests = new PreRequests()
   request: any
   socket: CyServer.Socket
   serverBus: EventEmitter
@@ -270,7 +270,7 @@ export class Http {
     this.buffers = new HttpBuffers()
     this.deferredSourceMapCache = new DeferredSourceMapCache(opts.request)
     this.config = opts.config
-    this.shouldCorrelatePreRequests = opts.shouldCorrelatePreRequests || (() => false)
+    // this.shouldCorrelatePreRequests = opts.shouldCorrelatePreRequests || (() => false)
     this.getFileServerToken = opts.getFileServerToken
     this.remoteStates = opts.remoteStates
     this.middleware = opts.middleware
@@ -298,7 +298,7 @@ export class Http {
       handleHttpRequestSpan,
       buffers: this.buffers,
       config: this.config,
-      shouldCorrelatePreRequests: this.shouldCorrelatePreRequests,
+      // shouldCorrelatePreRequests: this.shouldCorrelatePreRequests,
       getFileServerToken: this.getFileServerToken,
       remoteStates: this.remoteStates,
       request: this.request,
@@ -323,9 +323,9 @@ export class Http {
       getRenderedHTMLOrigins: this.getRenderedHTMLOrigins,
       getAUTUrl: this.getAUTUrl,
       setAUTUrl: this.setAUTUrl,
-      getPreRequest: (cb) => {
-        this.preRequests.get(ctx.req, ctx.debug, cb)
-      },
+      // getPreRequest: (cb) => {
+      //   this.preRequests.get(ctx.req, ctx.debug, cb)
+      // },
     }
 
     const onError = (error: Error): Promise<void> => {
@@ -339,7 +339,7 @@ export class Http {
         }
 
         ctx.debug('Re-using pre-request data %o', preRequest)
-        this.addPendingBrowserPreRequest(preRequest)
+        //  this.addPendingBrowserPreRequest(preRequest)
       }
 
       return _runStage(HttpStages.Error, ctx, onError)
@@ -414,7 +414,7 @@ export class Http {
     return this.buffers.set(buffer)
   }
 
-  addPendingBrowserPreRequest (browserPreRequest: BrowserPreRequest) {
-    this.preRequests.addPending(browserPreRequest)
-  }
+  // addPendingBrowserPreRequest (browserPreRequest: BrowserPreRequest) {
+  //   this.preRequests.addPending(browserPreRequest)
+  // }
 }

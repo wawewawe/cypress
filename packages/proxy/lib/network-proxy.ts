@@ -1,6 +1,6 @@
 import { telemetry } from '@packages/telemetry'
 import { Http, ServerCtx } from './http'
-import type { BrowserPreRequest } from './types'
+// import type { BrowserPreRequest } from './types'
 
 export class NetworkProxy {
   http: Http
@@ -9,9 +9,9 @@ export class NetworkProxy {
     this.http = new Http(opts)
   }
 
-  addPendingBrowserPreRequest (preRequest: BrowserPreRequest) {
-    this.http.addPendingBrowserPreRequest(preRequest)
-  }
+  // addPendingBrowserPreRequest (preRequest: BrowserPreRequest) {
+  //   this.http.addPendingBrowserPreRequest(preRequest)
+  // }
 
   handleHttpRequest (req, res) {
     const span = telemetry.startSpan({

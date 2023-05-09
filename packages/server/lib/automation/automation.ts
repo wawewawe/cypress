@@ -2,11 +2,11 @@ import Bluebird from 'bluebird'
 import { v4 as uuidv4 } from 'uuid'
 import { Cookies } from './cookies'
 import { Screenshot } from './screenshot'
-import type { BrowserPreRequest } from '@packages/proxy'
+// import type { BrowserPreRequest } from '@packages/proxy'
 import type { AutomationMiddleware, OnRequestEvent } from '@packages/types'
 import { cookieJar } from '../util/cookies'
 
-export type OnBrowserPreRequest = (browserPreRequest: BrowserPreRequest) => void
+// export type OnBrowserPreRequest = (browserPreRequest: BrowserPreRequest) => void
 
 export class Automation {
   private requests: Record<number, (any) => void>
@@ -14,7 +14,7 @@ export class Automation {
   private cookies: Cookies
   private screenshot: { capture: (data: any, automate: any) => any }
 
-  constructor (cyNamespace?: string, cookieNamespace?: string, screenshotsFolder?: string | false, public onBrowserPreRequest?: OnBrowserPreRequest, public onRequestEvent?: OnRequestEvent) {
+  constructor (cyNamespace?: string, cookieNamespace?: string, screenshotsFolder?: string | false, public onRequestEvent?: OnRequestEvent) {
     this.requests = {}
 
     // set the middleware

@@ -15,7 +15,7 @@ import la from 'lazy-ass'
 import type httpsProxy from '@packages/https-proxy'
 import { netStubbingState, NetStubbingState } from '@packages/net-stubbing'
 import { agent, clientCertificates, cors, httpUtils, uri } from '@packages/network'
-import { NetworkProxy, BrowserPreRequest } from '@packages/proxy'
+import { NetworkProxy } from '@packages/proxy'
 import type { SocketCt } from './socket-ct'
 import * as errors from './errors'
 import Request from './request'
@@ -379,9 +379,9 @@ export abstract class ServerBase<TSocket extends SocketE2E | SocketCt> {
     })
   }
 
-  addBrowserPreRequest (browserPreRequest: BrowserPreRequest) {
-    this.networkProxy.addPendingBrowserPreRequest(browserPreRequest)
-  }
+  // addBrowserPreRequest (browserPreRequest: BrowserPreRequest) {
+  //   this.networkProxy.addPendingBrowserPreRequest(browserPreRequest)
+  // }
 
   emitRequestEvent (eventName, data) {
     this.socket.toDriver('request:event', eventName, data)

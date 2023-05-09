@@ -31,37 +31,70 @@ const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
   const span = telemetry.startSpan({ name: 'extract:cypress:metadata:headers', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
   this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
-  const requestIsXhrOrFetch = this.req.headers['x-cypress-is-xhr-or-fetch']
-
-  span?.setAttributes({
-    isAUTFrame: this.req.isAUTFrame,
-  })
+  // @ts-ignore
+  this.req.resourceType = this.req.headers['x-cypress-resource-type']
+  // @ts-ignore
+  this.req.requestId = this.req.headers['x-cypress-request-id']
 
   if (this.req.headers['x-cypress-is-aut-frame']) {
     delete this.req.headers['x-cypress-is-aut-frame']
   }
 
-  if (this.req.headers['x-cypress-is-xhr-or-fetch']) {
-    this.debug(`found x-cypress-is-xhr-or-fetch header. Deleting x-cypress-is-xhr-or-fetch header.`)
-    delete this.req.headers['x-cypress-is-xhr-or-fetch']
+  if (this.req.headers['x-cypress-resource-type']) {
+    delete this.req.headers['x-cypress-resource-type']
   }
 
-  if (!doesTopNeedToBeSimulated(this) ||
-    // this should be unreachable, as the x-cypress-is-xhr-or-fetch header is only attached if
-    // the resource type is 'xhr' or 'fetch or 'true' (in the case of electron|extension).
-    // This is only needed for defensive purposes.
-    (requestIsXhrOrFetch !== 'true' && requestIsXhrOrFetch !== 'xhr' && requestIsXhrOrFetch !== 'fetch')) {
+  if (this.req.headers['x-cypress-request-id']) {
+    delete this.req.headers['x-cypress-request-id']
+  }
+
+  if (this.req.requestId) {
+    // TODO: manually build the prerequest (name change coming later) in order to associate proxied logs in the app
+    this.req.browserPreRequest = {
+      requestId: this.req.requestId,
+      method: this.req.method,
+      url: this.req.proxiedUrl,
+      // @ts-ignore
+      headers: this.req.headers,
+      // @ts-ignore
+      resourceType: this.req.resourceType,
+    }
+  }
+
+  span?.setAttributes({
+    isAUTFrame: this.req.isAUTFrame,
+  })
+
+  span?.end()
+
+  this.next()
+}
+
+const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
+  const span = telemetry.startSpan({ name: 'calculate:credential:level:if:applicable', parentSpan: this.reqMiddlewareSpan, isVerbose })
+
+  const doesTopNeedSimulation = doesTopNeedToBeSimulated(this)
+
+  span?.setAttributes({
+    doesTopNeedToBeSimulated: doesTopNeedSimulation,
+    resourceType: this.req.resourceType,
+  })
+
+  if (!doesTopNeedSimulation ||
+    (this.req.resourceType !== undefined && this.req.resourceType !== 'xhr' && this.req.resourceType !== 'fetch')) {
+    span?.end()
     this.next()
 
     return
   }
 
   this.debug(`looking up credentials for ${this.req.proxiedUrl}`)
-  const { requestedWith, credentialStatus } = this.requestedWithAndCredentialManager.get(this.req.proxiedUrl, requestIsXhrOrFetch !== 'true' ? requestIsXhrOrFetch : undefined)
+  const { credentialStatus, requestedWith } = this.requestedWithAndCredentialManager.get(this.req.proxiedUrl, this.req.resourceType)
 
   this.debug(`credentials calculated for ${requestedWith}:${credentialStatus}`)
 
-  this.req.requestedWith = requestedWith
+  // if for some reason the resourceType is not set or is incorrect (in the case of fetch where CDP/extension say xhr), re assign it
+  this.req.resourceType = requestedWith as any
   this.req.credentialsLevel = credentialStatus
 
   span?.setAttributes({
@@ -122,7 +155,7 @@ const MaybeAttachCrossOriginCookies: RequestMiddleware = function () {
 
   // Top needs to be simulated since the AUT is in a cross origin state. Get the "requested with" and credentials and see what cookies need to be attached
   const currentAUTUrl = this.getAUTUrl()
-  const shouldCookiesBeAttachedToRequest = shouldAttachAndSetCookies(this.req.proxiedUrl, currentAUTUrl, this.req.requestedWith, this.req.credentialsLevel, this.req.isAUTFrame)
+  const shouldCookiesBeAttachedToRequest = shouldAttachAndSetCookies(this.req.proxiedUrl, currentAUTUrl, this.req.resourceType as any, this.req.credentialsLevel, this.req.isAUTFrame)
 
   span?.setAttributes({
     currentAUTUrl,
@@ -173,66 +206,66 @@ const MaybeAttachCrossOriginCookies: RequestMiddleware = function () {
   this.next()
 }
 
-const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
-  const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan, isVerbose })
+// const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
+//   const span = telemetry.startSpan({ name: 'correlate:prerequest', parentSpan: this.reqMiddlewareSpan, isVerbose })
 
-  const shouldCorrelatePreRequests = this.shouldCorrelatePreRequests()
+//   const shouldCorrelatePreRequests = this.shouldCorrelatePreRequests()
 
-  span?.setAttributes({
-    shouldCorrelatePreRequest: shouldCorrelatePreRequests,
-    url: this.req.proxiedUrl,
-  })
+//   span?.setAttributes({
+//     shouldCorrelatePreRequest: shouldCorrelatePreRequests,
+//     url: this.req.proxiedUrl,
+//   })
 
-  if (!this.shouldCorrelatePreRequests()) {
-    span?.end()
+//   if (!this.shouldCorrelatePreRequests()) {
+//     span?.end()
 
-    return this.next()
-  }
+//     return this.next()
+//   }
 
-  const copyResourceTypeAndNext = () => {
-    this.req.resourceType = this.req.browserPreRequest?.resourceType
+//   const copyResourceTypeAndNext = () => {
+//     this.req.resourceType = this.req.browserPreRequest?.resourceType
 
-    span?.setAttributes({
-      resourceType: this.req.resourceType,
-    })
+//     span?.setAttributes({
+//       resourceType: this.req.resourceType,
+//     })
 
-    span?.end()
+//     span?.end()
 
-    return this.next()
-  }
+//     return this.next()
+//   }
 
-  if (this.req.headers['x-cypress-resolving-url']) {
-    this.debug('skipping prerequest for resolve:url')
-    delete this.req.headers['x-cypress-resolving-url']
-    const requestId = `cy.visit-${Date.now()}`
+//   if (this.req.headers['x-cypress-resolving-url']) {
+//     this.debug('skipping prerequest for resolve:url')
+//     delete this.req.headers['x-cypress-resolving-url']
+//     const requestId = `cy.visit-${Date.now()}`
 
-    this.req.browserPreRequest = {
-      requestId,
-      method: this.req.method,
-      url: this.req.proxiedUrl,
-      // @ts-ignore
-      headers: this.req.headers,
-      resourceType: 'document',
-      originalResourceType: 'document',
-    }
+//     this.req.browserPreRequest = {
+//       requestId,
+//       method: this.req.method,
+//       url: this.req.proxiedUrl,
+//       // @ts-ignore
+//       headers: this.req.headers,
+//       resourceType: 'document',
+//       originalResourceType: 'document',
+//     }
 
-    this.res.on('close', () => {
-      this.socket.toDriver('request:event', 'response:received', {
-        requestId,
-        headers: this.res.getHeaders(),
-        status: this.res.statusCode,
-      })
-    })
+//     this.res.on('close', () => {
+//       this.socket.toDriver('request:event', 'response:received', {
+//         requestId,
+//         headers: this.res.getHeaders(),
+//         status: this.res.statusCode,
+//       })
+//     })
 
-    return copyResourceTypeAndNext()
-  }
+//     return copyResourceTypeAndNext()
+//   }
 
-  this.debug('waiting for prerequest')
-  this.getPreRequest(((browserPreRequest) => {
-    this.req.browserPreRequest = browserPreRequest
-    copyResourceTypeAndNext()
-  }))
-}
+//   this.debug('waiting for prerequest')
+//   this.getPreRequest(((browserPreRequest) => {
+//     this.req.browserPreRequest = browserPreRequest
+//     copyResourceTypeAndNext()
+//   }))
+// }
 
 function shouldLog (req: CypressIncomingRequest) {
   // 1. Any matching `cy.intercept()` should cause `req` to be logged by default, unless `log: false` is passed explicitly.
@@ -528,10 +561,11 @@ const SendRequestOutgoing: RequestMiddleware = function () {
 export default {
   LogRequest,
   ExtractCypressMetadataHeaders,
+  CalculateCredentialLevelIfApplicable,
   MaybeSimulateSecHeaders,
   MaybeAttachCrossOriginCookies,
   MaybeEndRequestWithBufferedResponse,
-  CorrelateBrowserPreRequest,
+  // CorrelateBrowserPreRequest,
   SetMatchingRoutes,
   SendToDriver,
   InterceptRequest,

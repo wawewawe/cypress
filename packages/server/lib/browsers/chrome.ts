@@ -22,6 +22,7 @@ import type { CriClient } from './cri-client'
 import type { Automation } from '../automation'
 import type { BrowserLaunchOpts, BrowserNewTabOpts, RunModeVideoApi } from '@packages/types'
 import memory from './memory'
+import { normalizeResourceType } from '../automation/util'
 
 const debug = debugModule('cypress:server:browsers:chrome')
 
@@ -411,36 +412,23 @@ const _handlePausedRequests = async (client) => {
     const addedHeaders: {
       name: string
       value: string
-    }[] = []
+    }[] = [{
+      name: 'X-Cypress-Request-Id',
+      // maps to request ID in respons ereceived
+      value: params.networkId,
+    },
+    {
+      name: 'X-Cypress-Resource-Type',
+      value: normalizeResourceType(params.resourceType),
+    }]
 
-    /**
-     * Unlike the the web extension or Electrons's onBeforeSendHeaders, CDP can discern the difference
-     * between fetch or xhr resource types. Because of this, we set X-Cypress-Is-XHR-Or-Fetch to either
-     * 'xhr' or 'fetch' with CDP so the middleware can assume correct defaults in case credential/resourceTypes
-     * are not sent to the server.
-     * @see https://chromedevtools.github.io/devtools-protocol/tot/Network/#type-ResourceType
-     */
-    if (params.resourceType === 'XHR' || params.resourceType === 'Fetch') {
-      debug('add X-Cypress-Is-XHR-Or-Fetch header to: %s', params.request.url)
+    if (params.resourceType === 'Document' && await _isAUTFrame(params.frameId)) {
+      debug('add X-Cypress-Is-AUT-Frame header to: %s', params.request.url)
       addedHeaders.push({
-        name: 'X-Cypress-Is-XHR-Or-Fetch',
-        value: params.resourceType.toLowerCase(),
+        name: 'X-Cypress-Is-AUT-Frame',
+        value: 'true',
       })
     }
-
-    if (
-      // is a script, stylesheet, image, etc
-      params.resourceType !== 'Document'
-      || !(await _isAUTFrame(params.frameId))
-    ) {
-      return _continueRequest(client, params, addedHeaders)
-    }
-
-    debug('add X-Cypress-Is-AUT-Frame header to: %s', params.request.url)
-    addedHeaders.push({
-      name: 'X-Cypress-Is-AUT-Frame',
-      value: 'true',
-    })
 
     return _continueRequest(client, params, addedHeaders)
   })
