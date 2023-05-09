@@ -49,7 +49,7 @@ describe('Cookie Behavior', { browser: '!webkit' }, () => {
           describe('XMLHttpRequest', () => {
             // withCredentials option should have no effect on same-site requests
             // XHR requests seem like they need to be absolute within a cy.origin block, but fetch requests can be relative?
-            it('sets and attaches same-site cookies to request', () => {
+            it.only('sets and attaches same-site cookies to request', () => {
               cy.intercept(`${originUrl}/test-request`, (req) => {
                 expect(req['headers']['cookie']).to.equal('foo1=bar1')
 

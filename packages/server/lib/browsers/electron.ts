@@ -15,6 +15,8 @@ import type { BrowserLaunchOpts, Preferences, RunModeVideoApi } from '@packages/
 import memory from './memory'
 import { BrowserCriClient } from './browser-cri-client'
 import { getRemoteDebuggingPort } from '../util/electron-app'
+import type { CriClient } from './cri-client'
+import type Protocol from 'devtools-protocol'
 
 // TODO: unmix these two types
 type ElectronOpts = Windows.WindowOptions & BrowserLaunchOpts
@@ -29,6 +31,152 @@ const ELECTRON_DEBUG_EVENTS = [
   'session-end',
   'unresponsive',
 ]
+
+let frameTree
+let gettingFrameTree
+
+interface HasFrame {
+  frame: Protocol.Page.Frame
+}
+
+// const onReconnect = (client: CriClient) => {
+//   // if the client disconnects (e.g. due to a computer sleeping), update
+//   // the frame tree on reconnect in cases there were changes while
+//   // the client was disconnected
+//   return _updateFrameTree(client, 'onReconnect')()
+// }
+
+// eslint-disable-next-line @cypress/dev/arrow-body-multiline-braces
+const _updateFrameTree = (client: CriClient, eventName) => async () => {
+  debug(`update frame tree for ${eventName}`)
+
+  gettingFrameTree = new Promise<void>(async (resolve) => {
+    try {
+      frameTree = (await client.send('Page.getFrameTree')).frameTree
+      debug('frame tree updated')
+    } catch (err) {
+      debug('failed to update frame tree:', err.stack)
+    } finally {
+      gettingFrameTree = null
+
+      resolve()
+    }
+  })
+}
+
+const _listenForFrameTreeChanges = (client) => {
+  debug('listen for frame tree changes')
+
+  client.on('Page.frameAttached', _updateFrameTree(client, 'Page.frameAttached'))
+  client.on('Page.frameDetached', _updateFrameTree(client, 'Page.frameDetached'))
+}
+
+const _isAUTFrame = async (frameId: string) => {
+  debug('need frame tree')
+
+  // the request could come in while in the middle of getting the frame tree,
+  // which is asynchronous, so wait for it to be fetched
+  if (gettingFrameTree) {
+    debug('awaiting frame tree')
+
+    await gettingFrameTree
+  }
+
+  const frame = _.find(frameTree?.childFrames || [], ({ frame }) => {
+    return frame?.name?.startsWith('Your project:')
+  }) as HasFrame | undefined
+
+  if (frame) {
+    return frame.frame.id === frameId
+  }
+
+  return false
+}
+
+const _handlePausedRequests = (client) => {
+  // await client.send('Fetch.enable')
+
+  // adds a header to the request to mark it as a request for the AUT frame
+  // itself, so the proxy can utilize that for injection purposes
+  client.on('Fetch.requestPaused', async (params: Protocol.Fetch.RequestPausedEvent) => {
+    const addedHeaders: {
+      name: string
+      value: string
+    }[] = []
+
+    /**
+     * Unlike the the web extension or Electrons's onBeforeSendHeaders, CDP can discern the difference
+     * between fetch or xhr resource types. Because of this, we set X-Cypress-Is-XHR-Or-Fetch to either
+     * 'xhr' or 'fetch' with CDP so the middleware can assume correct defaults in case credential/resourceTypes
+     * are not sent to the server.
+     * @see https://chromedevtools.github.io/devtools-protocol/tot/Network/#type-ResourceType
+     */
+    if (params.resourceType === 'XHR' || params.resourceType === 'Fetch') {
+      debug('add X-Cypress-Is-XHR-Or-Fetch header to: %s', params.request.url)
+      addedHeaders.push({
+        name: 'X-Cypress-Is-XHR-Or-Fetch',
+        value: params.resourceType.toLowerCase(),
+      })
+    }
+
+    if (params.resourceType === 'Document') {
+      const a = ''
+
+      if (params.request.url.includes('primary-origin.html')) {
+        const b = ''
+      }
+
+      if (params.request.url.includes('secondary-origin.html')) {
+        const b = ''
+      }
+    }
+
+    if (
+      // is a script, stylesheet, image, etc
+      params.resourceType !== 'Document'
+      || !(await _isAUTFrame(params.frameId))
+    ) {
+      return _continueRequest(client, params, addedHeaders)
+    }
+
+    debug('add X-Cypress-Is-AUT-Frame header to: %s', params.request.url)
+    addedHeaders.push({
+      name: 'X-Cypress-Is-AUT-Frame',
+      value: 'true',
+    })
+
+    return _continueRequest(client, params, addedHeaders)
+  })
+}
+
+const _continueRequest = (client, params, headers?) => {
+  const details: Protocol.Fetch.ContinueRequestRequest = {
+    requestId: params.requestId,
+  }
+
+  if (headers && headers.length) {
+    // headers are received as an object but need to be an array
+    // to modify them
+    const currentHeaders = _.map(params.request.headers, (value, name) => ({ name, value }))
+
+    details.headers = [
+      ...currentHeaders,
+      ...headers,
+    ]
+  }
+
+  debug('continueRequest: %o', details)
+
+  client.send('Fetch.continueRequest', details).catch((err) => {
+    // swallow this error so it doesn't crash Cypress.
+    // an "Invalid InterceptionId" error can randomly happen in the driver tests
+    // when testing the redirection loop limit, when a redirect request happens
+    // to be sent after the test has moved on. this shouldn't crash Cypress, in
+    // any case, and likely wouldn't happen for standard user tests, since they
+    // will properly fail and not move on like the driver tests
+    debug('continueRequest failed, url: %s, error: %s', params.request.url, err?.stack || err)
+  })
+}
 
 let instance: BrowserInstance | null = null
 let browserCriClient: BrowserCriClient | null = null
@@ -53,6 +201,7 @@ const _getAutomation = async function (win, options: BrowserLaunchOpts, parent) 
   const port = getRemoteDebuggingPort()
 
   if (!browserCriClient) {
+    // TODO: issues with the reconnect fn
     browserCriClient = await BrowserCriClient.create(['127.0.0.1'], port, 'electron', options.onError, () => {})
   }
 
@@ -63,6 +212,10 @@ const _getAutomation = async function (win, options: BrowserLaunchOpts, parent) 
   }
 
   const automation = await CdpAutomation.create(pageCriClient.send, pageCriClient.on, sendClose, parent)
+
+  // TODO: here is attach listeners
+  await _handlePausedRequests(pageCriClient)
+  _listenForFrameTreeChanges(pageCriClient)
 
   automation.onRequest = _.wrap(automation.onRequest, async (fn, message, data) => {
     switch (message) {
@@ -284,9 +437,11 @@ export = {
 
     // enabling can only happen once the window has loaded
     await this._enableDebugger()
+    await this._enablePage()
+    await this._enableFetch()
 
     await win.loadURL(url)
-    this._listenToOnBeforeHeaders(win)
+    //  this._listenToOnBeforeHeaders(win)
 
     return win
   },
@@ -295,6 +450,18 @@ export = {
     debug('debugger: enable Console and Network')
 
     return browserCriClient?.currentlyAttachedTarget?.send('Console.enable')
+  },
+
+  _enableFetch () {
+    debug('debugger: enable Fetch')
+
+    return browserCriClient?.currentlyAttachedTarget?.send('Fetch.enable')
+  },
+
+  _enablePage () {
+    debug('debugger: enable Page')
+
+    return browserCriClient?.currentlyAttachedTarget?.send('Page.enable')
   },
 
   _handleDownloads (win, dir, automation) {
@@ -328,50 +495,50 @@ export = {
     })
   },
 
-  _listenToOnBeforeHeaders (win: BrowserWindow) {
-    // true if the frame only has a single parent, false otherwise
-    const isFirstLevelIFrame = (frame) => (!!frame?.parent && !frame.parent.parent)
+  // _listenToOnBeforeHeaders (win: BrowserWindow) {
+  //   // true if the frame only has a single parent, false otherwise
+  //   // const isFirstLevelIFrame = (frame) => (!!frame?.parent && !frame.parent.parent)
 
-    // adds a header to the request to mark it as a request for the AUT frame
-    // itself, so the proxy can utilize that for injection purposes
-    win.webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
-      const requestModifications = {
-        requestHeaders: {
-          ...details.requestHeaders,
-          /**
-           * Unlike CDP, Electrons's onBeforeSendHeaders resourceType cannot discern the difference
-           * between fetch or xhr resource types, but classifies both as 'xhr'. Because of this,
-           * we set X-Cypress-Is-XHR-Or-Fetch to true if the request is made with 'xhr' or 'fetch' so the
-           * middleware doesn't incorrectly assume which request type is being sent
-           * @see https://www.electronjs.org/docs/latest/api/web-request#webrequestonbeforesendheadersfilter-listener
-           */
-          ...(details.resourceType === 'xhr') ? {
-            'X-Cypress-Is-XHR-Or-Fetch': 'true',
-          } : {},
-        },
-      }
+  //   // adds a header to the request to mark it as a request for the AUT frame
+  //   // itself, so the proxy can utilize that for injection purposes
+  //   // win.webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
+  //   //   const requestModifications = {
+  //   //     requestHeaders: {
+  //   //       ...details.requestHeaders,
+  //   //       /**
+  //   //        * Unlike CDP, Electrons's onBeforeSendHeaders resourceType cannot discern the difference
+  //   //        * between fetch or xhr resource types, but classifies both as 'xhr'. Because of this,
+  //   //        * we set X-Cypress-Is-XHR-Or-Fetch to true if the request is made with 'xhr' or 'fetch' so the
+  //   //        * middleware doesn't incorrectly assume which request type is being sent
+  //   //        * @see https://www.electronjs.org/docs/latest/api/web-request#webrequestonbeforesendheadersfilter-listener
+  //   //        */
+  //   //       ...(details.resourceType === 'xhr') ? {
+  //   //         'X-Cypress-Is-XHR-Or-Fetch': 'true',
+  //   //       } : {},
+  //   //     },
+  //   //   }
 
-      if (
-        // isn't an iframe
-        details.resourceType !== 'subFrame'
-        // the top-level frame or a nested frame
-        || !isFirstLevelIFrame(details.frame)
-        // is the spec frame, not the AUT
-        || details.url.includes('__cypress')
-      ) {
-        cb(requestModifications)
+  //   //   if (
+  //   //     // isn't an iframe
+  //   //     details.resourceType !== 'subFrame'
+  //   //     // the top-level frame or a nested frame
+  //   //     || !isFirstLevelIFrame(details.frame)
+  //   //     // is the spec frame, not the AUT
+  //   //     || details.url.includes('__cypress')
+  //   //   ) {
+  //   //     cb(requestModifications)
 
-        return
-      }
+  //   //     return
+  //   //   }
 
-      cb({
-        requestHeaders: {
-          ...requestModifications.requestHeaders,
-          'X-Cypress-Is-AUT-Frame': 'true',
-        },
-      })
-    })
-  },
+  //   //   cb({
+  //   //     requestHeaders: {
+  //   //       ...requestModifications.requestHeaders,
+  //   //       'X-Cypress-Is-AUT-Frame': 'true',
+  //   //     },
+  //   //   })
+  //   // })
+  // },
 
   _getPartition (options) {
     if (options.isTextTerminal) {
