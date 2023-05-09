@@ -8,10 +8,10 @@ import { cors, uri } from '@packages/network'
 import debugModule from 'debug'
 import { URL } from 'url'
 
-import type { BrowserPreRequest, BrowserResponseReceived } from '@packages/proxy'
+import type { BrowserResponseReceived } from '@packages/proxy'
 import type { WriteVideoFrame } from '@packages/types'
 import type { Automation } from '../automation'
-import { cookieMatches, CyCookie, CyCookieFilter, normalizeResourceType } from '../automation/util'
+import { cookieMatches, CyCookie, CyCookieFilter } from '../automation/util'
 
 export type CdpCommand = keyof ProtocolMapping.Commands
 
