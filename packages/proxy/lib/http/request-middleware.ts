@@ -4,7 +4,6 @@ import { InterceptRequest, SetMatchingRoutes } from '@packages/net-stubbing'
 import type { HttpMiddleware } from './'
 import { getSameSiteContext, addCookieJarCookiesToRequest, shouldAttachAndSetCookies } from './util/cookies'
 import { doesTopNeedToBeSimulated } from './util/top-simulation'
-import type { CypressIncomingRequest } from '../types'
 
 // do not use a debug namespace in this file - use the per-request `this.debug` instead
 // available as cypress-verbose:proxy:http
@@ -23,49 +22,49 @@ const LogRequest: RequestMiddleware = function () {
   this.next()
 }
 
-const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
-  if (!this.shouldCorrelatePreRequests()) {
-    return this.next()
-  }
+// const CorrelateBrowserPreRequest: RequestMiddleware = async function () {
+//   if (!this.shouldCorrelatePreRequests()) {
+//     return this.next()
+//   }
 
-  const copyResourceTypeAndNext = () => {
-    this.req.resourceType = this.req.browserPreRequest?.resourceType
+//   const copyResourceTypeAndNext = () => {
+//     this.req.resourceType = this.req.browserPreRequest?.resourceType
 
-    this.next()
-  }
+//     this.next()
+//   }
 
-  if (this.req.headers['x-cypress-resolving-url']) {
-    this.debug('skipping prerequest for resolve:url')
-    delete this.req.headers['x-cypress-resolving-url']
-    const requestId = `cy.visit-${Date.now()}`
+//   if (this.req.headers['x-cypress-resolving-url']) {
+//     this.debug('skipping prerequest for resolve:url')
+//     delete this.req.headers['x-cypress-resolving-url']
+//     const requestId = `cy.visit-${Date.now()}`
 
-    this.req.browserPreRequest = {
-      requestId,
-      method: this.req.method,
-      url: this.req.proxiedUrl,
-      // @ts-ignore
-      headers: this.req.headers,
-      resourceType: 'document',
-      originalResourceType: 'document',
-    }
+//     this.req.browserPreRequest = {
+//       requestId,
+//       method: this.req.method,
+//       url: this.req.proxiedUrl,
+//       // @ts-ignore
+//       headers: this.req.headers,
+//       resourceType: 'document',
+//       originalResourceType: 'document',
+//     }
 
-    this.res.on('close', () => {
-      this.socket.toDriver('request:event', 'response:received', {
-        requestId,
-        headers: this.res.getHeaders(),
-        status: this.res.statusCode,
-      })
-    })
+//     this.res.on('close', () => {
+//       this.socket.toDriver('request:event', 'response:received', {
+//         requestId,
+//         headers: this.res.getHeaders(),
+//         status: this.res.statusCode,
+//       })
+//     })
 
-    return copyResourceTypeAndNext()
-  }
+//     return copyResourceTypeAndNext()
+//   }
 
-  this.debug('waiting for prerequest')
-  this.getPreRequest(((browserPreRequest) => {
-    this.req.browserPreRequest = browserPreRequest
-    copyResourceTypeAndNext()
-  }))
-}
+//   this.debug('waiting for prerequest')
+//   this.getPreRequest(((browserPreRequest) => {
+//     this.req.browserPreRequest = browserPreRequest
+//     copyResourceTypeAndNext()
+//   }))
+// }
 
 const ExtractCypressMetadataHeaders: RequestMiddleware = function () {
   this.req.isAUTFrame = !!this.req.headers['x-cypress-is-aut-frame']
@@ -86,12 +85,12 @@ const CalculateCredentialLevelIfApplicable: RequestMiddleware = function () {
   }
 
   this.debug(`looking up credentials for ${this.req.proxiedUrl}`)
-  const { credentialStatus, resourceType } = this.resourceTypeAndCredentialManager.get(this.req.proxiedUrl, this.req.resourceType)
+  const { credentialStatus, resourceType } = this.resourceTypeAndCredentialManager.get(this.req.proxiedUrl, undefined)
 
   this.debug(`credentials calculated for ${resourceType}:${credentialStatus}`)
 
-  // if for some reason the resourceType is not set, have a fallback in place
-  this.req.resourceType = !this.req.resourceType ? resourceType : this.req.resourceType
+  // resource type is no longer set since prerequest is removed
+  this.req.resourceType = resourceType
   this.req.credentialsLevel = credentialStatus
   this.next()
 }
@@ -144,32 +143,33 @@ const MaybeAttachCrossOriginCookies: RequestMiddleware = function () {
   this.next()
 }
 
-function shouldLog (req: CypressIncomingRequest) {
-  // 1. Any matching `cy.intercept()` should cause `req` to be logged by default, unless `log: false` is passed explicitly.
-  if (req.matchingRoutes?.length) {
-    const lastMatchingRoute = req.matchingRoutes[0]
+// function shouldLog (req: CypressIncomingRequest) {
+//   // 1. Any matching `cy.intercept()` should cause `req` to be logged by default, unless `log: false` is passed explicitly.
+//   if (req.matchingRoutes?.length) {
+//     const lastMatchingRoute = req.matchingRoutes[0]
 
-    if (!lastMatchingRoute.staticResponse) {
-      // No StaticResponse is set, therefore the request must be logged.
-      return true
-    }
+//     if (!lastMatchingRoute.staticResponse) {
+//       // No StaticResponse is set, therefore the request must be logged.
+//       return true
+//     }
 
-    if (lastMatchingRoute.staticResponse.log !== undefined) {
-      return Boolean(lastMatchingRoute.staticResponse.log)
-    }
-  }
+//     if (lastMatchingRoute.staticResponse.log !== undefined) {
+//       return Boolean(lastMatchingRoute.staticResponse.log)
+//     }
+//   }
 
-  // 2. Otherwise, only log if it is an XHR or fetch.
-  return req.resourceType === 'fetch' || req.resourceType === 'xhr'
-}
+//   // 2. Otherwise, only log if it is an XHR or fetch.
+//   return req.resourceType === 'fetch' || req.resourceType === 'xhr'
+// }
 
-const SendToDriver: RequestMiddleware = function () {
-  if (shouldLog(this.req) && this.req.browserPreRequest) {
-    this.socket.toDriver('request:event', 'incoming:request', this.req.browserPreRequest)
-  }
+// prerequest is removed, so proxy logs shouldnt be generated
+// const SendToDriver: RequestMiddleware = function () {
+//   if (shouldLog(this.req) && this.req.browserPreRequest) {
+//     this.socket.toDriver('request:event', 'incoming:request', this.req.browserPreRequest)
+//   }
 
-  this.next()
-}
+//   this.next()
+// }
 
 const MaybeEndRequestWithBufferedResponse: RequestMiddleware = function () {
   const buffer = this.buffers.take(this.req.proxiedUrl)
@@ -301,14 +301,14 @@ const SendRequestOutgoing: RequestMiddleware = function () {
 
 export default {
   LogRequest,
-  CorrelateBrowserPreRequest,
+  // CorrelateBrowserPreRequest,
   ExtractCypressMetadataHeaders,
   CalculateCredentialLevelIfApplicable,
   MaybeSimulateSecHeaders,
   MaybeAttachCrossOriginCookies,
   MaybeEndRequestWithBufferedResponse,
   SetMatchingRoutes,
-  SendToDriver,
+  // SendToDriver,
   InterceptRequest,
   RedirectToClientRouteIfUnloaded,
   EndRequestsToBlockedHosts,
