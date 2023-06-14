@@ -7,6 +7,10 @@ _Released 03/1/2023 (PENDING)_
 
 - The [`cy.readFile()`](/api/commands/readfile) command is now retry-able as a [query command](https://on.cypress.io/retry-ability). This should not affect any tests using it; the functionality is unchanged. However, it can no longer be overwritten using [`Cypress.Commands.overwrite()`](/api/cypress-api/custom-commands#Overwrite-Existing-Commands). Addressed in [#25595](https://github.com/cypress-io/cypress/pull/25595).
 
+**Features:**
+
+- Cypress Protocol placeholder. Addresses [#24040](https://github.com/cypress-io/cypress/issues/24040).
+
 ## 12.15.0
 
 _Released 06/20/2023 (PENDING)_
