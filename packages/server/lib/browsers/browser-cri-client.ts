@@ -171,7 +171,15 @@ export class BrowserCriClient {
 
     // If we are keeping a tab open, we need to first launch a new default tab prior to closing the existing one
     if (shouldKeepTabOpen) {
-      target = await this.browserClient.send('Target.createTarget', { url: 'about:blank' })
+      try {
+        target = await this.browserClient.send('Target.createTarget', { url: 'about:blank' })
+      } catch (e) {
+        if (e.message.includes('Target.createTarget will not run as browser CRI connection was reset')) {
+          debug('Could not create target. Likely the browser instance has crashed and been reconnected')
+        }
+
+        throw e
+      }
     }
 
     debug('Closing current target %s', this.currentlyAttachedTarget.targetId)
