@@ -29,7 +29,7 @@ describe('Browser Crash Handling', () => {
 
   // It should fail the chrome_tab_crash spec, but the simple spec should run and succeed
   context('when the browser process crashes in chrome', () => {
-    systemTests.it.only('fails w/ video off', {
+    systemTests.it('fails w/ video off', {
       browser: 'chrome',
       spec: 'chrome_process_crash.cy.js,simple.cy.js',
       snapshot: true,
