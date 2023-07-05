@@ -122,7 +122,7 @@ describe('http/request-middleware', () => {
       })
     })
 
-    it('does not set requestedWith or credentialLevel on the request if top does NOT need to be simulated', async () => {
+    it('does not set resourceType or credentialLevel on the request if top does NOT need to be simulated', async () => {
       const ctx = {
         getAUTUrl: sinon.stub().returns(undefined),
         req: {
@@ -138,12 +138,12 @@ describe('http/request-middleware', () => {
 
       await testMiddleware([ExtractCypressMetadataHeaders], ctx)
       .then(() => {
-        expect(ctx.req.requestedWith).not.to.exist
+        expect(ctx.req.resourceType).not.to.exist
         expect(ctx.req.credentialsLevel).not.to.exist
       })
     })
 
-    it('does not set requestedWith or credentialLevel on the request if x-cypress-is-xhr-or-fetch has invalid values', async () => {
+    it('does not set resourceType or credentialLevel on the request if x-cypress-is-xhr-or-fetch has invalid values', async () => {
       const ctx = {
         getAUTUrl: sinon.stub().returns('http://localhost:8080'),
         remoteStates: {
@@ -162,19 +162,19 @@ describe('http/request-middleware', () => {
 
       await testMiddleware([ExtractCypressMetadataHeaders], ctx)
       .then(() => {
-        expect(ctx.req.requestedWith).not.to.exist
+        expect(ctx.req.resourceType).not.to.exist
         expect(ctx.req.credentialsLevel).not.to.exist
       })
     })
 
     // CDP can determine whether or not the request is xhr | fetch, but the extension or electron cannot
-    it('provides requestedWithAndCredentialManager with requestedWith if able to determine from header (xhr)', async () => {
+    it('provides resourceTypeAndCredentialManager with resourceType if able to determine from header (xhr)', async () => {
       const ctx = {
         getAUTUrl: sinon.stub().returns('http://localhost:8080'),
         remoteStates: {
           isPrimarySuperDomainOrigin: sinon.stub().returns(false),
         },
-        requestedWithAndCredentialManager: {
+        resourceTypeAndCredentialManager: {
           get: sinon.stub().returns({}),
         },
         req: {
@@ -191,18 +191,18 @@ describe('http/request-middleware', () => {
 
       await testMiddleware([ExtractCypressMetadataHeaders], ctx)
       .then(() => {
-        expect(ctx.requestedWithAndCredentialManager.get).to.have.been.calledWith('http://localhost:8080', `xhr`)
+        expect(ctx.resourceTypeAndCredentialManager.get).to.have.been.calledWith('http://localhost:8080', `xhr`)
       })
     })
 
     // CDP can determine whether or not the request is xhr | fetch, but the extension or electron cannot
-    it('provides requestedWithAndCredentialManager with requestedWith if able to determine from header (fetch)', async () => {
+    it('provides resourceTypeAndCredentialManager with resourceType if able to determine from header (fetch)', async () => {
       const ctx = {
         getAUTUrl: sinon.stub().returns('http://localhost:8080'),
         remoteStates: {
           isPrimarySuperDomainOrigin: sinon.stub().returns(false),
         },
-        requestedWithAndCredentialManager: {
+        resourceTypeAndCredentialManager: {
           get: sinon.stub().returns({}),
         },
         req: {
@@ -219,19 +219,19 @@ describe('http/request-middleware', () => {
 
       await testMiddleware([ExtractCypressMetadataHeaders], ctx)
       .then(() => {
-        expect(ctx.requestedWithAndCredentialManager.get).to.have.been.calledWith('http://localhost:8080', `fetch`)
+        expect(ctx.resourceTypeAndCredentialManager.get).to.have.been.calledWith('http://localhost:8080', `fetch`)
       })
     })
 
-    it('sets the requestedWith and credentialsLevel on the request from whatever is returned by requestedWithAndCredentialManager if conditions apply', async () => {
+    it('sets the resourceType and credentialsLevel on the request from whatever is returned by resourceTypeAndCredentialManager if conditions apply', async () => {
       const ctx = {
         getAUTUrl: sinon.stub().returns('http://localhost:8080'),
         remoteStates: {
           isPrimarySuperDomainOrigin: sinon.stub().returns(false),
         },
-        requestedWithAndCredentialManager: {
+        resourceTypeAndCredentialManager: {
           get: sinon.stub().returns({
-            requestedWith: 'fetch',
+            resourceType: 'fetch',
             credentialStatus: 'same-origin',
           }),
         },
@@ -249,7 +249,7 @@ describe('http/request-middleware', () => {
 
       await testMiddleware([ExtractCypressMetadataHeaders], ctx)
       .then(() => {
-        expect(ctx.req.requestedWith).to.equal('fetch')
+        expect(ctx.req.resourceType).to.equal('fetch')
         expect(ctx.req.credentialsLevel).to.equal('same-origin')
       })
     })
@@ -373,7 +373,7 @@ describe('http/request-middleware', () => {
     it('is a noop if cookies do NOT need to be attached to request', async () => {
       const ctx = await getContext(['request=cookie'], ['jar=cookie'], 'http://foobar.com', 'http://app.foobar.com')
 
-      ctx.req.requestedWith = 'fetch'
+      ctx.req.resourceType = 'fetch'
       ctx.req.credentialsLevel = 'omit'
 
       await testMiddleware([MaybeAttachCrossOriginCookies], ctx)
@@ -384,7 +384,7 @@ describe('http/request-middleware', () => {
     it(`allows setting cookies on request if resource type cannot be determined, but comes from the AUT frame (likely in the case of documents or redirects)`, async function () {
       const ctx = await getContext([], ['jar=cookie'], 'http://foobar.com/index.html', 'http://app.foobar.com/index.html')
 
-      ctx.req.requestedWith = undefined
+      ctx.req.resourceType = undefined
       ctx.req.credentialsLevel = undefined
       ctx.req.isAUTFrame = true
       await testMiddleware([MaybeAttachCrossOriginCookies], ctx)
@@ -395,7 +395,7 @@ describe('http/request-middleware', () => {
     it(`otherwise, does not allow setting cookies if request type cannot be determined and is not from the AUT and is cross-origin`, async function () {
       const ctx = await getContext([], ['jar=cookie'], 'http://foobar.com/index.html', 'http://app.foobar.com/index.html')
 
-      ctx.req.requestedWith = undefined
+      ctx.req.resourceType = undefined
       ctx.req.credentialsLevel = undefined
       ctx.req.isAUTFrame = false
       await testMiddleware([MaybeAttachCrossOriginCookies], ctx)
@@ -406,7 +406,7 @@ describe('http/request-middleware', () => {
     it('sets the cookie header to undefined if no cookies exist on the request, none in the jar, but cookies should be attached', async () => {
       const ctx = await getContext([], [], 'http://foobar.com', 'http://app.foobar.com')
 
-      ctx.req.requestedWith = 'xhr'
+      ctx.req.resourceType = 'xhr'
       ctx.req.credentialsLevel = true
 
       await testMiddleware([MaybeAttachCrossOriginCookies], ctx)
@@ -417,7 +417,7 @@ describe('http/request-middleware', () => {
     it('prepends cookie jar cookies to request', async () => {
       const ctx = await getContext(['request=cookie'], ['jar=cookie'], 'http://foobar.com', 'http://app.foobar.com')
 
-      ctx.req.requestedWith = 'fetch'
+      ctx.req.resourceType = 'fetch'
       ctx.req.credentialsLevel = 'include'
 
       await testMiddleware([MaybeAttachCrossOriginCookies], ctx)
