@@ -190,6 +190,8 @@ export function create (projectRoot, _options: WindowOptions, newBrowserWindow =
   })
 
   win.webContents.on('new-window', function (...args) {
+    console.log('new window called')
+
     return options.onNewWindow.apply(win, args)
   })
 
