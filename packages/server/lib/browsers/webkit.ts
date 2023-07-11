@@ -110,7 +110,7 @@ export async function open (browser: Browser, url: string, options: BrowserLaunc
   automation.use(wkAutomation)
 
   class WkInstance extends EventEmitter implements BrowserInstance {
-    pid = pwServer.process().pid
+    pid = pwServer.process().pid as number
 
     constructor () {
       super()
@@ -143,5 +143,5 @@ export async function open (browser: Browser, url: string, options: BrowserLaunc
     }
   }
 
-  return new WkInstance()
+  return new WkInstance() as BrowserInstance
 }
