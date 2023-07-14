@@ -1193,16 +1193,16 @@ jobs:
     steps:
       - checkout
       - install-required-node
-      - when:
-          condition:
-            and:
-              - equal: [ 'darwin-arm64', << parameters.executor >> ]
-          steps: 
-            - run:
-                name: Explicitly set arch for darwin-arm64 
-                command: npm config set arch arm64
       - verify-build-setup:
           executor: << parameters.executor >>
+      - when:
+          and:
+          - equal: [ darwin-arm64, << parameters.executor > ]
+        steps:
+          - run:
+               # see https://github.com/CircleCI-Public/macos-orb/pull/46/files
+              name: Installing Rosetta 2 for darwin-arm64
+              command: << include(scripts/install-rosetta.sh) >>
       - persist_to_workspace:
           root: ~/
           paths:
