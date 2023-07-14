@@ -30,7 +30,7 @@ mainBuildFilters: &mainBuildFilters
         - /^release\/\d+\.\d+\.\d+$/
         # use the following branch as well to ensure that v8 snapshot cache updates are fully tested
         - 'update-v8-snapshot-cache-on-develop'
-        - 'chore/use_cloud_m1_runners'
+        - 'chore/fix_create_build_artifacts_arm_64_darwin'
 
 # usually we don't build Mac app - it takes a long time
 # but sometimes we want to really confirm we are doing the right thing
@@ -41,7 +41,7 @@ macWorkflowFilters: &darwin-workflow-filters
     - equal: [ develop, << pipeline.git.branch >> ]
     # use the following branch as well to ensure that v8 snapshot cache updates are fully tested
     - equal: [ 'update-v8-snapshot-cache-on-develop', << pipeline.git.branch >> ]
-    - equal: [ 'chore/use_cloud_m1_runners', << pipeline.git.branch >> ]
+    - equal: [ 'chore/fix_create_build_artifacts_arm_64_darwin', << pipeline.git.branch >> ]
     - matches:
         pattern: /^release\/\d+\.\d+\.\d+$/
         value: << pipeline.git.branch >>
@@ -52,7 +52,6 @@ linuxArm64WorkflowFilters: &linux-arm64-workflow-filters
     - equal: [ develop, << pipeline.git.branch >> ]
     # use the following branch as well to ensure that v8 snapshot cache updates are fully tested
     - equal: [ 'update-v8-snapshot-cache-on-develop', << pipeline.git.branch >> ]
-    - equal: [ 'chore/use_cloud_m1_runners', << pipeline.git.branch >> ]
     - matches:
         pattern: /^release\/\d+\.\d+\.\d+$/
         value: << pipeline.git.branch >>
@@ -72,7 +71,6 @@ windowsWorkflowFilters: &windows-workflow-filters
     - equal: [ develop, << pipeline.git.branch >> ]
     # use the following branch as well to ensure that v8 snapshot cache updates are fully tested
     - equal: [ 'update-v8-snapshot-cache-on-develop', << pipeline.git.branch >> ]
-    - equal: [ 'chore/use_cloud_m1_runners', << pipeline.git.branch >> ]
     - matches:
         pattern: /^release\/\d+\.\d+\.\d+$/
         value: << pipeline.git.branch >>
@@ -214,7 +212,7 @@ commands:
           command: |
             source ./scripts/ensure-node.sh
             # Minification takes some time. We only really need to do that for the binary (and we regenerate snapshots separately there)
-            V8_SNAPSHOT_DISABLE_MINIFY=1 yarn build-v8-snapshot-prod
+            sudo V8_SNAPSHOT_DISABLE_MINIFY=1 DEBUG=cypress:snap* yarn build-v8-snapshot-prod
       - prepare-modules-cache # So we don't throw these in the workspace cache
       - persist_to_workspace:
           root: ~/
@@ -1195,6 +1193,14 @@ jobs:
     steps:
       - checkout
       - install-required-node
+      - when:
+          condition:
+            and:
+              - equal: [ 'darwin-arm64', << parameters.executor >> ]
+          steps: 
+            - run:
+                name: Explicitly set arch for darwin-arm64 
+                command: npm config set arch arm64
       - verify-build-setup:
           executor: << parameters.executor >>
       - persist_to_workspace:
@@ -2856,11 +2862,13 @@ darwin-arm64-workflow: &darwin-arm64-workflow
     - node_modules_install:
         name: darwin-arm64-node-modules-install
         executor: darwin-arm64
+        resource_class: macos.m1.large.gen1
         only-cache-for-root-user: true
 
     - build:
         name: darwin-arm64-build
         executor: darwin-arm64
+        resource_class: macos.m1.large.gen1
         requires:
           - darwin-arm64-node-modules-install
 
@@ -2872,23 +2880,26 @@ darwin-arm64-workflow: &darwin-arm64-workflow
           - test-runner:commit-status-checks
           - test-runner:build-binary
         executor: darwin-arm64
-        resource_class: large
+        resource_class: macos.m1.large.gen1
         requires:
           - darwin-arm64-build
 
     - v8-integration-tests:
         name: darwin-arm64-v8-integration-tests
         executor: darwin-arm64
+        resource_class: macos.m1.large.gen1
         requires:
           - darwin-arm64-build
     - driver-integration-memory-tests:
         name: darwin-arm64-driver-integration-memory-tests
         executor: darwin-arm64
+        resource_class: macos.m1.large.gen1
         requires:
           - darwin-arm64-build
     - server-unit-tests-cloud-environment:
         name: darwin-arm64-server-unit-tests-cloud-environment
         executor: darwin-arm64
+        resource_class: macos.m1.large.gen1
         requires:
           - darwin-arm64-build
 
