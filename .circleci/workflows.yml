@@ -1073,7 +1073,7 @@ commands:
               sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
               DISABLE_SNAPSHOT_REQUIRE=1 yarn binary-build --version $(node ./scripts/get-next-version.js)
             else
-              yarn binary-build --version $(node ./scripts/get-next-version.js)
+              sudo yarn binary-build --version $(node ./scripts/get-next-version.js)
             fi
       - run:
           name: Zip the binary
