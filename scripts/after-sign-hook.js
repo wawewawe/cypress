@@ -3,7 +3,7 @@
 // "afterSign": "./scripts/after-sign-hook.js"
 const fs = require('fs')
 const path = require('path')
-let electron_notarize = require('electron-notarize')
+let electron_notarize = require('@electron/notarize')
 
 module.exports = async function (params) {
   // Only notarize the app on Mac OS.
