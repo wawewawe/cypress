@@ -2581,6 +2581,18 @@
   optionalDependencies:
     global-agent "^3.0.0"
 
+"@electron/osx-sign@^1.0.1":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@electron/osx-sign/-/osx-sign-1.0.4.tgz#8e91442846471636ca0469426a82b253b9170151"
+  integrity sha512-xfhdEcIOfAZg7scZ9RQPya1G1lWo8/zMCwUXAulq0SfY7ONIW+b9qGyKdMyuMctNYwllrIS+vmxfijSfjeh97g==
+  dependencies:
+    compare-version "^0.1.2"
+    debug "^4.3.4"
+    fs-extra "^10.0.0"
+    isbinaryfile "^4.0.8"
+    minimist "^1.2.6"
+    plist "^3.0.5"
+
 "@electron/universal@1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@electron/universal/-/universal-1.0.5.tgz#b812340e4ef21da2b3ee77b2b4d35c9b86defe37"
@@ -2592,7 +2604,7 @@
     dir-compare "^2.4.0"
     fs-extra "^9.0.1"
 
-"@electron/universal@^1.2.1":
+"@electron/universal@^1.3.2":
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/@electron/universal/-/universal-1.4.1.tgz#3fbda2a5ed9ff9f3304c8e8316b94c1e3a7b3785"
   integrity sha512-lE/U3UNw1YHuowNbTmKNs9UlS3En3cPgwM5MI+agIgr/B1hSze9NdOP0qn7boZaI9Lph8IDv3/24g9IxnJP7aQ==
@@ -8920,7 +8932,7 @@ asap@^2.0.0, asap@~2.0.3:
   resolved "https://registry.yarnpkg.com/asap/-/asap-2.0.6.tgz#e50347611d7e690943208bbdafebcbc2fb866d46"
   integrity sha1-5QNHYR1+aQlDIIu9r+vLwvuGbUY=
 
-asar@^3.0.3, asar@^3.1.0:
+asar@^3.0.3:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/asar/-/asar-3.1.0.tgz#70b0509449fe3daccc63beb4d3c7d2e24d3c6473"
   integrity sha512-vyxPxP5arcAqN4F/ebHd/HhwnAiZtwhglvdmc7BR2f0ywbVNTOpSeyhLDbGXtE/y58hv1oC75TaNIXutnsOZsQ==
@@ -13390,18 +13402,18 @@ electron-osx-sign@^0.5.0:
     minimist "^1.2.0"
     plist "^3.0.1"
 
-electron-packager@16.0.0:
-  version "16.0.0"
-  resolved "https://registry.yarnpkg.com/electron-packager/-/electron-packager-16.0.0.tgz#2eb7f14114e06b545207496ef66b10c24b7c8ba1"
-  integrity sha512-7Ey4UUaHg3FYhA7ktsAvCWP8srp9+iPljGdeJBsNaZBakU6HWhvRC+Pc7LWXGCgAVIN5BQsUwR3xrCbFno91VA==
+electron-packager@17.0.0:
+  version "17.0.0"
+  resolved "https://registry.yarnpkg.com/electron-packager/-/electron-packager-17.0.0.tgz#09e86734da51049de08b14cee8fc6b2d424efeec"
+  integrity sha512-dDy/gMR7Zl9t5AOFNIDjX+7T0d6GEifh1o/ciDUUf/fnHpVVNjDG92HsWgToGN/H9CZi5NEdlHWUQ49Wj7TN5g==
   dependencies:
+    "@electron/asar" "^3.2.1"
     "@electron/get" "^2.0.0"
-    "@electron/universal" "^1.2.1"
-    asar "^3.1.0"
+    "@electron/osx-sign" "^1.0.1"
+    "@electron/universal" "^1.3.2"
     cross-spawn-windows-exe "^1.2.0"
     debug "^4.0.1"
     electron-notarize "^1.1.1"
-    electron-osx-sign "^0.5.0"
     extract-zip "^2.0.0"
     filenamify "^4.1.0"
     fs-extra "^10.1.0"
@@ -23796,7 +23808,7 @@ plist@3.0.6:
     base64-js "^1.5.1"
     xmlbuilder "^15.1.1"
 
-plist@^3.0.0, plist@^3.0.1, plist@^3.0.4:
+plist@^3.0.0, plist@^3.0.1, plist@^3.0.4, plist@^3.0.5:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/plist/-/plist-3.1.0.tgz#797a516a93e62f5bde55e0b9cc9c967f860893c9"
   integrity sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==
