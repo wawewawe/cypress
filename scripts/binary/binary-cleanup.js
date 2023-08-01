@@ -88,6 +88,8 @@ const getDependencyPathsToKeep = async (buildAppDir) => {
         'emitter',
         'ts-loader',
         'uglify-js',
+        'esbuild',
+        'enhanced-resolve/lib/createInnerCallback',
         '@babel/preset-typescript/package.json',
       ],
     })
