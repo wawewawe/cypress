@@ -87,6 +87,7 @@ const getDependencyPathsToKeep = async (buildAppDir) => {
         '@swc/core',
         'emitter',
         'ts-loader',
+        'uglify-js',
         '@babel/preset-typescript/package.json',
       ],
     })
