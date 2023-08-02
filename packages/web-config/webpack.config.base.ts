@@ -23,8 +23,7 @@ process.env.NODE_ENV = env
 // @ts-ignore
 const evalDevToolPlugin = new webpack.EvalDevToolModulePlugin({
   moduleFilenameTemplate: 'cypress://[namespace]/[resource-path]',
-  // TODO: changed [hash] to [contenthash] @see https://webpack.js.org/migrate/5/#clean-up-configuration
-  fallbackModuleFilenameTemplate: 'cypress://[namespace]/[resourcePath]?[hash]',
+  fallbackModuleFilenameTemplate: 'cypress://[namespace]/[resourcePath]?[contenthash]',
 })
 
 evalDevToolPlugin.evalDevToolPlugin = true
