@@ -32,9 +32,6 @@ const optimization = {
   usedExports: true,
   providedExports: true,
   sideEffects: true,
-  // TODO: remove chunkIds & moduleIds @see https://webpack.js.org/migrate/5/#clean-up-configuration
-  chunkIds: 'named',
-  moduleIds: 'named',
   removeAvailableModules: true,
   mergeDuplicateChunks: true,
   flagIncludedChunks: true,
@@ -221,7 +218,7 @@ export const getCommonConfig = () => {
       // other sourcemap options:
       // [new webpack.SourceMapDevToolPlugin({
       //   moduleFilenameTemplate: 'cypress://[namespace]/[resource-path]',
-      //   fallbackModuleFilenameTemplate: 'cypress://[namespace]/[resourcePath]?[hash]'
+      //   fallbackModuleFilenameTemplate: 'cypress://[namespace]/[resourcePath]?[contenthash]'
       // })] :
       ...[
         (env === 'production'
