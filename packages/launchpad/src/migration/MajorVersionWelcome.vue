@@ -32,76 +32,57 @@
             </h1>
             <div class="mb-[16px]">
               <ExternalLink
-                href="https://on.cypress.io/changelog#12-0-0"
+                href="https://on.cypress.io/changelog?utm_source=splash-page&utm_campaign=v13#13-0-0"
                 class="font-bold text-indigo-500"
               >
-                12.0.0
+                13.0.0
               </ExternalLink>
               <span class="font-light pl-[10px] text-gray-500 text-[14px]">
-                Released {{ versionReleaseDates['12'] }}
+                Released {{ versionReleaseDates['13'] }}
               </span>
             </div>
             <div class="children:mb-[16px]">
               <p>
-                For a complete list of updates and breaking changes in v12.0.0, please review our
-                <ExternalLink href="https://on.cypress.io/changelog#12-0-0">
+                For a complete list of updates and breaking changes in v13.0.0, please review our
+                <ExternalLink href="https://on.cypress.io/changelog?utm_source=splash-page&utm_campaign=v13#13-0-0">
                   <!--eslint-disable-next-line vue/multiline-html-element-content-newline-->
                   changelog</ExternalLink>.
               </p>
 
+              <!-- EMBEDDED VIDEO PLACEHOLDER -->
+
               <h2 class="font-bold text-[18px] text-jade-1000">
-                Testing Multi-Origin Workflows
+                Test Replay
               </h2>
 
               <p>
-                Cypress now has full support for testing multiple origins in a single test with the <ExternalLink href="https://on.cypress.io/origin">
-                  <code>cy.origin()</code>
-                </ExternalLink> command! To take a deep-dive into how this works, read our
+                Test Replay brings the debugging experience you know and love from the Cypress app directly into your recorded tests in Cypress Cloud. Inspect the DOM, network events, and console logs of your application from your tests exactly as they ran in CI.
+              </p>
 
-                <ExternalLink href="https://on.cypress.io/cy-origin-journey">
-                  <!--eslint-disable-next-line vue/multiline-html-element-content-newline-->
-                  blog post</ExternalLink>.
+              <!-- TODO: Do we need an onlink for this? -->
+              <p>
+                Test Replay is available for all Cypress Cloud plans for Chromium-based browsers. Learn more in our <ExternalLink href="https://docs.cypress.io/guides/cloud/debugging/test-replay?utm_source=splash-page&utm_campaign=v13">
+                  documentation
+                </ExternalLink>.
+              </p>
+
+              <p>
+                To start using Test Replay, simply record a run to Cypress Cloud. Once recorded, click the "View Test Replay" icon beside any test in the Cypress Cloud to see a live replay of the recorded run.
               </p>
 
               <h2 class="font-bold mt-[24px] mb-[16px] text-[18px] text-jade-1000">
-                Test Isolation
+                Changes to video defaults
               </h2>
 
               <p>
-                Cypress now ensures each test runs in a clean browser context by default. We now clear the page, <code>cookies</code>, <code>localStorage</code>, and <code>sessionStorage</code> before each test to guide developers towards writing independent tests from the start.
-              </p>
-              <p>
-                If your existing tests relied on a previous test to run successfully, you might need to make some modifications to your test suite. See the
-
-                <ExternalLink href="https://on.cypress.io/migration-guide#Migrating-to-Cypress-12-0">
-                  Migration Guide
-                </ExternalLink>
-
-                for more details on what you can expect.
+                <code>video</code> and <code>videoCompression</code> are now set to <code>false</code> by default. Recording and compressing videos can be resource intensive, sometimes impacting the speed that tests run in CI. Test Replay also serves as a replacement for debugging via video for many of our Cloud users. We’ve changed these video options to be opt in so you can configure recording video based on your needs.
               </p>
 
-              <h2 class="font-bold mt-[24px] mb-[16px] text-[18px] text-jade-1000">
-                We Now Store The Browser Context, So You Don’t Have To
-              </h2>
-
+              <!-- TODO: Do we need an onlink for this? -->
               <p>
-                The <ExternalLink href="https://on.cypress.io/session">
-                  <code>cy.session()</code>
-                </ExternalLink> command complements test isolation by providing a way to save and share browser contexts between tests and specs in a single run on the same machine.
-              </p>
-
-              <h2 class="font-bold mt-[24px] mb-[16px] text-[18px] text-jade-1000">
-                Detaching Ourselves From Detached Dom Errors
-              </h2>
-
-              <p>
-                We have made enhancements to how Cypress manages DOM element resolution to reduce the likelihood of hitting the dreaded detached DOM errors due to maintaining stale DOM references. We've updated our
-
-                <ExternalLink href="https://on.cypress.io/retry-ability">
-                  Retry-ability Guide
-                </ExternalLink>
-
-                with all the details if you'd like to learn more.
+                The <code>shouldUploadVideoOnPass</code> option is no longer available. This option was mostly used to skip video compression for unused videos which is now skipped by default. If you want to control which videos are saved locally or uploaded to Cypress Cloud, see our <ExternalLink href="https://docs.cypress.io/guides/guides/screenshots-and-videos#Delete-videos-for-specs-without-failing-or-retried-tests?utm_source=splash-page&utm_campaign=v13">
+                  documentation
+                </ExternalLink> for our recommended workaround.
               </p>
             </div>
           </div>
@@ -113,6 +94,31 @@
             <h2 class="font-bold mt-[24px] mb-[12px] text-[14px] text-gray-600">
               Previous release highlights
             </h2>
+            <div class="pb-[8px]">
+              <ExternalLink
+                href="https://on.cypress.io/changelog#12-0-0"
+                class="font-bold text-indigo-500"
+              >
+                12.0.0
+              </ExternalLink>
+              <span class="font-light pl-[10px] text-gray-500 text-[14px]">
+                Released {{ versionReleaseDates['12'] }}
+              </span>
+            </div>
+            <p class="text-[14px] leading-[20px]">
+              We made <ExternalLink href="https://on.cypress.io/origin">
+                <code>cy.origin()</code>
+              </ExternalLink>, <ExternalLink href="https://on.cypress.io/session">
+                <code>cy.session()</code>
+              </ExternalLink>, and test isolation generally available to allow users to test multiple origin workflows while allowing users to rehydrate test state in a consistent manner.
+              <br>
+              <br>
+              Read about the v12.0.0 changes in our
+              <ExternalLink href="https://on.cypress.io/cypress-12-release">
+                <!--eslint-disable-next-line vue/multiline-html-element-content-newline-->
+                blog post</ExternalLink>.
+            </p>
+            <br>
             <div class="pb-[8px]">
               <ExternalLink
                 href="https://on.cypress.io/changelog#11-0-0"
@@ -212,6 +218,7 @@ const versionReleaseDates = computed(() => {
     '10': useTimeAgo(Date.UTC(2022, 5, 1)).value,
     '11': useTimeAgo(Date.UTC(2022, 10, 8)).value,
     '12': useTimeAgo(Date.UTC(2022, 11, 6)).value,
+    '13': useTimeAgo(Date.UTC(2023, 7, 23)).value,
   }
 })
 
