@@ -20,7 +20,14 @@ describe('visits', () => {
   })
 
   // https://github.com/cypress-io/cypress/issues/5446
-  it('can load a site via TLSv1', () => {
+  /**
+   * Node 18 does not work OOTB with with TLS v1.0 and is not recommended.
+   * TLS 1.2 is the recommended minimum and will work. If users still need to
+   * use TLS v1.0, they likely need to remain on Node 16.
+   * This does not have an impact on the version of node cypress ships or uses internally.
+   * @see https://nodejs.org/dist/latest-v18.x/docs/api/tls.html#tlscreatesecurecontextoptions
+   */
+  it('can load a site via TLSv1_2', () => {
     cy.visit('https://localhost:6776')
   })
 

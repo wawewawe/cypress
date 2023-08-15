@@ -22,7 +22,7 @@ exports['e2e visit / low response timeout / passes'] = `
     ✓ can load an http page with a huge amount of elements without timing out
     ✓ can load a local file with a huge amount of elements without timing out
     ✓ can load a website which uses invalid HTTP header chars
-    ✓ can load a site via TLSv1
+    ✓ can load a site via TLSv1_2
     issue #225: hash urls
       ✓ can visit a hash url and loads
       ✓ can visit the same hash url and loads

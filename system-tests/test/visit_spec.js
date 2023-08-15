@@ -6,11 +6,11 @@ const useragent = require('express-useragent')
 const { allowDestroy } = require('@packages/network')
 const systemTests = require('../lib/system-tests').default
 
-// create an HTTPS server that forces TLSv1
-const startTlsV1Server = (port) => {
+// create an HTTPS server that forces TLSv1_2
+const startTlsV1_2Server = (port) => {
   return Bluebird.fromCallback((cb) => {
     const opts = _.merge({
-      secureProtocol: 'TLSv1_server_method',
+      secureProtocol: 'TLSv1_2_server_method',
     }, cert)
 
     const serv = https.createServer(opts, (req, res) => {
@@ -135,7 +135,7 @@ describe('e2e visit', () => {
       spec: 'visit.cy.js',
       snapshot: true,
       onRun (exec) {
-        return startTlsV1Server(6776)
+        return startTlsV1_2Server(6776)
         .then((serv) => {
           return exec()
           .then(() => {
@@ -154,7 +154,7 @@ describe('e2e visit', () => {
       },
       snapshot: true,
       onRun (exec) {
-        return startTlsV1Server(6776)
+        return startTlsV1_2Server(6776)
         .then((serv) => {
           return exec()
           .then(() => {
