@@ -37,6 +37,85 @@ delete (window as any).Mocha
 
 export const SKIPPED_DUE_TO_BROWSER_MESSAGE = ' (skipped due to browser)'
 
+// is marked as an individual function to make functionality easier to test
+export const calculateTestStatus = function (strategy?: 'detect-flake-and-pass-on-threshold' | 'detect-flake-but-always-fail', options?: any) {
+  const totalAttemptsAlreadyExecuted = this.currentRetry() + 1
+  let shouldAttemptsContinue: boolean = true
+  let outerTestStatus: 'passed' | 'failed' | undefined = undefined
+
+  const passedTests = _.filter(this.prevAttempts, (o) => o.state === 'passed')
+  const failedTests = _.filter(this.prevAttempts, (o) => o.state === 'failed')
+
+  // additionally, if the current test passed, add it to the attempt list
+  if (this.state === 'passed') {
+    passedTests.push(this)
+  } else if (this.state === 'failed') {
+    failedTests.push(this)
+  }
+
+  // if there is AT LEAST one failed test, we know we need to apply retry logic
+  // Otherwise, the test might be burning in (not implemented yet) OR the test passed on the first attempt,
+  // meaning retry logic does NOT need to be applied
+  if (failedTests.length > 0) {
+    const maxAttempts = this.retries() + 1
+    const remainingAttempts = maxAttempts - totalAttemptsAlreadyExecuted
+    const passingAttempts = passedTests.length
+
+    // below variables are used for when strategy is "detect-flake-and-pass-on-threshold" or no strategy is defined
+    let passesRequired = strategy !== 'detect-flake-but-always-fail' ?
+      (options?.passesRequired || 1) :
+      null
+
+    const neededPassingAttemptsLeft = strategy !== 'detect-flake-but-always-fail' ?
+      passesRequired - passingAttempts :
+      null
+
+    // below variables are used for when strategy is only "detect-flake-but-always-fail"
+    let stopIfAnyPassed = strategy === 'detect-flake-but-always-fail' ?
+      (options?.stopIfAnyPassed || false) :
+      null
+
+    // do we have the required amount of passes? If yes, we no longer need to keep running the test
+    if (strategy !== 'detect-flake-but-always-fail' && passingAttempts >= passesRequired) {
+      outerTestStatus = 'passed'
+      this.final = true
+      shouldAttemptsContinue = false
+    } else if (totalAttemptsAlreadyExecuted < maxAttempts &&
+      (
+        // For strategy "detect-flake-and-pass-on-threshold" or no strategy:
+        // if we haven't met our max attempt limit AND we have enough remaining attempts that can satisfy the passing requirement
+        // @ts-expect-error
+        (strategy !== 'detect-flake-but-always-fail' && remainingAttempts >= neededPassingAttemptsLeft) ||
+        // For strategy "detect-flake-but-always-fail":
+        // if we haven't met our max attempt limit AND
+        //    stopIfAnyPassed is false OR
+        //    stopIfAnyPassed is true and no tests have passed yet
+        (strategy === 'detect-flake-but-always-fail' && (!stopIfAnyPassed || stopIfAnyPassed && passingAttempts === 0))
+      )) {
+      this.final = false
+      shouldAttemptsContinue = true
+    } else {
+      // otherwise, we should stop retrying the test
+      outerTestStatus = 'failed'
+      this.final = true
+      // if an outerTestStatus is 'failed', but the last test was 'passed', we need to force the status so mocha doesn't flag the test as failed
+      this.forceState = this.state === 'passed' ? this.state : undefined
+      shouldAttemptsContinue = false
+    }
+  } else {
+    outerTestStatus = 'passed'
+    shouldAttemptsContinue = false
+    this.final = true
+  }
+
+  return {
+    strategy,
+    shouldAttemptsContinue,
+    attempts: totalAttemptsAlreadyExecuted,
+    outerStatus: outerTestStatus,
+  }
+}
+
 type MochaArgs = [string, Function | undefined]
 function createRunnable (ctx, fnType: 'Test' | 'Suite', mochaArgs: MochaArgs, runnableFn: Function, testCallback: Function | string = '', _testConfig?: Record<string, any>) {
   const runnable = runnableFn.apply(ctx, mochaArgs)
@@ -221,6 +300,10 @@ const restoreTestClone = () => {
   Test.prototype.clone = testClone
 }
 
+const removeCalculateTestStatus = () => {
+  delete Test.prototype.calculateTestStatus
+}
+
 const restoreRunnerRunTests = () => {
   Runner.prototype.runTests = runnerRunTests
 }
@@ -326,8 +409,18 @@ function patchTestClone () {
     ret._testConfig = this._testConfig
     ret.id = this.id
     ret.order = this.order
+    ret._currentRetry = this._currentRetry
 
     return ret
+  }
+}
+
+function createCalculateTestStatus (Cypress: Cypress.Cypress) {
+  Test.prototype.calculateTestStatus = function () {
+    let retriesConfig = Cypress.config('retries')
+
+    // @ts-expect-error
+    return calculateTestStatus.call(this, retriesConfig?.experimentalStrategy, retriesConfig?.experimentalOptions)
   }
 }
 
@@ -495,6 +588,7 @@ const restore = () => {
   restoreHookRetries()
   restoreRunnerRunTests()
   restoreTestClone()
+  removeCalculateTestStatus()
   restoreSuiteAddTest()
   restoreSuiteAddSuite()
   restoreSuiteHooks()
@@ -509,6 +603,7 @@ const override = (specWindow, Cypress, config) => {
   patchHookRetries()
   patchRunnerRunTests()
   patchTestClone()
+  createCalculateTestStatus(Cypress)
   patchSuiteAddTest(specWindow, config)
   patchSuiteAddSuite(specWindow, config)
   patchSuiteHooks(specWindow, config)

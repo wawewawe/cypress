@@ -31,6 +31,10 @@ export interface TestProps extends RunnableProps {
 export interface UpdatableTestProps {
   id: TestProps['id']
   state?: TestProps['state']
+  // the final state of the test (the attempt might pass, but the test should be marked as failed)
+  _cypressTestStatusInfo?: {
+    outerStatus?: TestState
+  }
   err?: TestProps['err']
   hookId?: string
   failedFromHookId?: string
@@ -89,7 +93,7 @@ export default class Test extends Runnable {
   }
 
   @computed get state () {
-    return this.lastAttempt ? this.lastAttempt.state : 'active'
+    return this.lastAttempt ? (this.lastAttempt._testOuterStatus || this.lastAttempt.state) : 'active'
   }
 
   @computed get err () {
@@ -122,19 +126,19 @@ export default class Test extends Runnable {
   }
 
   addLog = (props: LogProps) => {
-    return this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
+    return this._withAttempt(props.testCurrentRetry ?? this.currentRetry, (attempt: Attempt) => {
       return attempt.addLog(props)
     })
   }
 
   updateLog (props: LogProps) {
-    this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
+    this._withAttempt(props.testCurrentRetry ?? this.currentRetry, (attempt: Attempt) => {
       attempt.updateLog(props)
     })
   }
 
   removeLog (props: LogProps) {
-    this._withAttempt(props.testCurrentRetry || this.currentRetry, (attempt: Attempt) => {
+    this._withAttempt(props.testCurrentRetry ?? this.currentRetry, (attempt: Attempt) => {
       attempt.removeLog(props)
     })
   }
