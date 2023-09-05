@@ -96,4 +96,8 @@ interface CypressRunnable extends Mocha.Runnable {
   hookName: string
   id: any
   err: any
+  // Added by Cypress to Tests in order to calculate continue conditions for experimentalRetries
+  shouldContinue?: () => boolean
+  // Added by Cypress to Tests in order to determine if the experimentalRetries test run passed so we can leverage in the retry logic.
+  hasAttemptPassed?: boolean
 }

@@ -18,6 +18,40 @@ const { overrideRequire } = require('./override_require')
 // otherwise mocha will be resolved from project's node_modules and might not work with our code
 const customReporterMochaPath = path.dirname(require.resolve('mocha-7.0.1'))
 
+const buildAttemptMessage = (currentRetry, totalRetries) => {
+  return `(Attempt ${currentRetry} of ${totalRetries})`
+}
+
+const getIconStatus = (status) => {
+  let overallStatusSymbol
+  let overallStatusSymbolColor
+  let overallStatusColor
+
+  switch (status) {
+    case 'passed':
+      overallStatusSymbol = mochaSymbols.ok
+      overallStatusSymbolColor = 'checkmark'
+      overallStatusColor = 'checkmark'
+      break
+    case 'failed':
+      // do we need to fail the current test after printing?
+      overallStatusSymbol = mochaSymbols.err
+      overallStatusSymbolColor = 'bright fail'
+      overallStatusColor = 'error message'
+      break
+    default:
+      overallStatusSymbol = undefined
+      overallStatusSymbolColor = undefined
+      overallStatusColor = 'medium'
+  }
+
+  return {
+    overallStatusSymbol,
+    overallStatusSymbolColor,
+    overallStatusColor,
+  }
+}
+
 overrideRequire((depPath, _load) => {
   if ((depPath === 'mocha') || depPath.startsWith('mocha/')) {
     return _load(depPath.replace('mocha', customReporterMochaPath))
@@ -191,7 +225,8 @@ const mergeErr = function (runnable, runnables, stats) {
   // dont mutate the test, and merge in the runnable title
   // in the case its a hook so that we emit the right 'fail'
   // event for reporters
-  test = _.extend({}, test, { title: runnable.title })
+  // we also need to propagate the cypressTestStatusInfo to print the info correctly
+  test = _.extend({}, test, { title: runnable.title, _cypressTestStatusInfo: runnable._cypressTestStatusInfo, finalState: runnable.finalState, state: runnable.state })
 
   return [test, test.err]
 }
@@ -249,13 +284,14 @@ class Reporter {
     this.normalizeTest = this.normalizeTest.bind(this)
   }
 
-  setRunnables (rootRunnable) {
+  setRunnables (rootRunnable, cypressConfig) {
     if (!rootRunnable) {
       rootRunnable = { title: '' }
     }
 
     // manage stats ourselves
     this.stats = { suites: 0, tests: 0, passes: 0, pending: 0, skipped: 0, failures: 0 }
+    this.retriesConfig = cypressConfig ? cypressConfig.retries : {}
     this.runnables = {}
     rootRunnable = this._createRunnable(rootRunnable, 'suite')
     const reporter = Reporter.loadReporter(this.reporterName, this.projectRoot)
@@ -281,23 +317,96 @@ class Reporter {
         --indents
       })
 
+      const retriesConfig = this.retriesConfig
+
       // Override the default reporter to always show test timing even for fast tests
       // and display slow ones in yellow rather than red
       this.runner._events.pass[2] = function (test) {
+        const cypressTestMetaData = test._cypressTestStatusInfo
+
         const durationColor = test.speed === 'slow' ? 'medium' : 'fast'
-        const fmt =
+
+        let fmt
+
+        // print the default if the experiment is not configured
+        if (!retriesConfig?.experimentalStrategy) {
+          fmt =
+            Array(indents).join('  ') +
+            mochaColor('checkmark', `  ${ mochaSymbols.ok}`) +
+            mochaColor('pass', ' %s') +
+            mochaColor(durationColor, ' (%dms)')
+
+          // Log: `✓ test title (300ms)` when a test passes
+          // eslint-disable-next-line no-console
+          console.log(fmt, test.title, test.duration)
+        } else {
+          // if there have been no retries and experimental retries is configured, DON'T decorate the last test in the console as an attempt
+          if (cypressTestMetaData.attempts > 1) {
+            const lastTestStatus = getIconStatus(test.state)
+
+            fmt =
+              Array(indents).join('  ') +
+              mochaColor(lastTestStatus.overallStatusColor, `  ${ lastTestStatus.overallStatusSymbol}${buildAttemptMessage(cypressTestMetaData.attempts, test.retries + 1)}`)
+
+            // or Log: `✓(Attempt 3 of 3) test title` when the overall outerStatus of a test has passed
+            // eslint-disable-next-line no-console
+            console.log(fmt, test.title)
+          }
+
+          const finalTestStatus = getIconStatus(cypressTestMetaData.outerStatus)
+
+          const finalMessaging =
+            Array(indents).join('  ') +
+            mochaColor(finalTestStatus.overallStatusSymbolColor, `  ${ finalTestStatus.overallStatusSymbol ? finalTestStatus.overallStatusSymbol : ''}`) +
+            mochaColor(finalTestStatus.overallStatusColor, ' %s') +
+            mochaColor(durationColor, ' (%dms)')
+
+          // Log: ✓`test title` when the overall outerStatus of a test has passed
+          // eslint-disable-next-line no-console
+          console.log(finalMessaging, test.title, test.duration)
+        }
+      }
+
+      const originalFailPrint = this.runner._events.fail[2]
+
+      this.runner._events.fail[2] = function (test) {
+        const cypressTestMetaData = test._cypressTestStatusInfo
+
+        // print the default if the experiment is not configured
+        if (!retriesConfig?.experimentalStrategy) {
+          return originalFailPrint.call(this, test)
+        }
+
+        const durationColor = test.speed === 'slow' ? 'medium' : 'fast'
+
+        // if there have been no retries and experimental retries is configured, DON'T decorate the last test in the console as an attempt
+        if (cypressTestMetaData.attempts > 1) {
+          const lastTestStatus = getIconStatus(test.state)
+
+          const fmt =
+            Array(indents).join('  ') +
+            mochaColor(lastTestStatus.overallStatusColor, `  ${ lastTestStatus.overallStatusSymbol}${buildAttemptMessage(cypressTestMetaData.attempts, test.retries + 1)}`)
+
+          // Log: `✖(Attempt 3 of 3) test title (300ms)` when a test fails and none of the retries have passed
+          // eslint-disable-next-line no-console
+          console.log(fmt, test.title)
+        }
+
+        const finalTestStatus = getIconStatus(cypressTestMetaData.outerStatus)
+
+        const finalMessaging =
           Array(indents).join('  ') +
-          mochaColor('checkmark', `  ${ mochaSymbols.ok}`) +
-          mochaColor('pass', ' %s') +
+          mochaColor(finalTestStatus.overallStatusSymbolColor, `  ${ finalTestStatus.overallStatusSymbol ? finalTestStatus.overallStatusSymbol : ''}`) +
+          mochaColor(finalTestStatus.overallStatusColor, ' %s') +
           mochaColor(durationColor, ' (%dms)')
 
-        // Log: `✓ test title (300ms)` when a test passes
+        // Log: ✖`test title` when the overall outerStatus of a test has failed
         // eslint-disable-next-line no-console
-        console.log(fmt, test.title, test.duration)
+        console.log(finalMessaging, test.title, test.duration)
       }
-    }
 
-    this.runner.ignoreLeaks = true
+      this.runner.ignoreLeaks = true
+    }
   }
 
   _createRunnable (runnableProps, type, parent) {
@@ -361,12 +470,35 @@ class Reporter {
 
   _logRetry (test) {
     const runnable = this.runnables[test.id]
-    const padding = '  '.repeat(runnable.titlePath().length)
-    const retryMessage = mochaColor('medium', `(Attempt ${test.currentRetry + 1} of ${test.retries + 1})`)
 
-    // Log: `(Attempt 1 of 2) test title` when a test retries
+    // merge the runnable with the updated test props to gain most recent status from the app runnable (in the case a passed test is retried)
+    _.extend(runnable, test)
+    const padding = '  '.repeat(runnable.titlePath().length)
+
+    // dont display a pass/fail symbol if we don't know the status
+    let mochaSymbolToDisplay = ''
+    let mochaColorScheme = 'medium'
+
+    // if experimental retries are configured, we need to print the pass/fail status of each attempt as it is no longer implied
+    if (this.retriesConfig?.experimentalStrategy) {
+      switch (runnable.state) {
+        case 'passed':
+          mochaSymbolToDisplay = mochaColor('checkmark', mochaSymbols.ok)
+          mochaColorScheme = 'green'
+          break
+        case 'failed':
+          mochaSymbolToDisplay = mochaColor('bright fail', mochaSymbols.err)
+          mochaColorScheme = 'error message'
+          break
+        default:
+      }
+    }
+
+    const attemptMessage = mochaColor(mochaColorScheme, buildAttemptMessage(test.currentRetry + 1, test.retries + 1))
+
+    // Log: `(Attempt 1 of 2) test title` when a test attempts
     // eslint-disable-next-line no-console
-    console.log(`${padding}${retryMessage} ${test.title}`)
+    return console.log(`${padding}${mochaSymbolToDisplay}${attemptMessage} ${test.title}`)
   }
 
   normalizeHook (hook = {}) {
@@ -379,13 +511,26 @@ class Reporter {
   }
 
   normalizeTest (test = {}) {
+    let outerTest = _.clone(test)
+
+    // in the case tests were skipped or another case where they haven't run, test._cypressTestStatusInfo?.outerStatus will be undefined
+    outerTest.state = test._cypressTestStatusInfo?.outerStatus || test.state
+
+    // if the outerStatus is failed, but the last test passed, look up the first error that occurred
+    if (test.state === 'passed' && outerTest.state === 'failed') {
+      outerTest.err = (test.prevAttempts || []).find((t) => t.state === 'failed')?.err
+      // otherwise, if the test failed then we can just set the error to the outer test similar to the state
+    } else if (test.state === 'failed') {
+      outerTest.err = test.err
+    }
+
     const normalizedTest = {
-      testId: orNull(test.id),
-      title: getTitlePath(test),
-      state: orNull(test.state),
-      body: orNull(test.body),
-      displayError: orNull(test.err && test.err.stack),
-      attempts: _.map((test.prevAttempts || []).concat([test]), (attempt) => {
+      testId: orNull(outerTest.id),
+      title: getTitlePath(outerTest),
+      state: orNull(outerTest.state),
+      body: orNull(outerTest.body),
+      displayError: orNull(outerTest.err && outerTest.err.stack),
+      attempts: _.map((outerTest.prevAttempts || []).concat([test]), (attempt) => {
         const err = attempt.err && {
           name: attempt.err.name,
           message: attempt.err.message,

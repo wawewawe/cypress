@@ -25,7 +25,7 @@ const RUNNABLE_AFTER_RUN_ASYNC_EVENT = 'runner:runnable:after:run:async'
 
 const RUNNABLE_LOGS = ['routes', 'agents', 'commands', 'hooks'] as const
 const RUNNABLE_PROPS = [
-  '_testConfig', 'id', 'order', 'title', '_titlePath', 'root', 'hookName', 'hookId', 'err', 'state', 'pending', 'failedFromHookId', 'body', 'speed', 'type', 'duration', 'wallClockStartedAt', 'wallClockDuration', 'timings', 'file', 'originalTitle', 'invocationDetails', 'final', 'currentRetry', 'retries', '_slow',
+  '_cypressTestStatusInfo', '_testConfig', 'id', 'order', 'title', '_titlePath', 'root', 'hookName', 'hookId', 'err', 'state', 'pending', 'failedFromHookId', 'body', 'speed', 'type', 'duration', 'wallClockStartedAt', 'wallClockDuration', 'timings', 'file', 'originalTitle', 'invocationDetails', 'final', 'currentRetry', 'retries', '_slow',
 ] as const
 
 const debug = debugFn('cypress:driver:runner')
@@ -480,7 +480,7 @@ const overrideRunnerHook = (Cypress, _runner, getTestById, getTest, setTest, get
 
         if (test.final !== false) {
           test.final = true
-          if (test.state === 'passed') {
+          if (test.state === 'passed' && test?._cypressTestStatusInfo?.outerStatus !== 'failed') {
             Cypress.action('runner:pass', wrap(test))
           }
 
@@ -915,6 +915,11 @@ const setHookFailureProps = (test, hook, err) => {
   test.duration = hook.duration // TODO: nope (?)
   test.hookName = hookName // TODO: why are we doing this?
   test.failedFromHookId = hook.hookId
+  // there should never be a case where the outerStatus of a test is set AND the last test failed on a hook and the state is passed
+  // therefor, if the last test fails on a hook, the outerStatus should also indicate a failure.
+  if (test?._cypressTestStatusInfo?.outerStatus) {
+    test._cypressTestStatusInfo.outerStatus = test.state
+  }
 }
 
 function getTestFromRunnable (runnable) {
@@ -1138,6 +1143,8 @@ const _runnerListeners = (_runner, Cypress, _emissions, getTestById, getTest, se
     // always set runnable err so we can tap into
     // taking a screenshot on error
     runnable.err = $errUtils.wrapErr(err)
+    // if the last test passed, but the outerStatus of a test failed, we need to correct the status of the test to say 'passed
+    runnable.state = runnable.forceState || runnable.state
 
     if (!runnable.alreadyEmittedMocha) {
       // do not double emit this event
@@ -1353,9 +1360,7 @@ export default {
       replaceTest(test, test.id)
     }
 
-    const maybeHandleRetry = (runnable, err) => {
-      if (!err) return
-
+    const maybeHandleRetryOnFailure = (runnable, err) => {
       const r = runnable
       const isHook = r.type === 'hook'
       const isTest = r.type === 'test'
@@ -1364,7 +1369,11 @@ export default {
       const isBeforeEachHook = isHook && !!hookName.match(/before each/)
       const isAfterEachHook = isHook && !!hookName.match(/after each/)
       const retryAbleRunnable = isTest || isBeforeEachHook || isAfterEachHook
-      const willRetry = (test._currentRetry < test._retries) && retryAbleRunnable
+      const testStatus = test.calculateTestStatus()
+      // only retry-able if this is either the first attempt of the test that hasn't run yet on a beforeEach hook
+      // OR we have attempted multiple times and have met the exit condition
+      // this is important for 'detect-flake-and-pass-on-threshold' if the config can't be satisfied before all retries are attempted
+      const willRetry = (testStatus.shouldAttemptsContinue || (isBeforeEachHook && testStatus.attempts === 1)) && retryAbleRunnable
       const isTestConfigOverride = !fired(TEST_BEFORE_RUN_EVENT, test)
 
       const fail = function () {
@@ -1372,6 +1381,14 @@ export default {
       }
       const noFail = function () {
         return
+      }
+
+      if (isTest) {
+        // if there is no error, then the test passed!
+        // set a custom property on the test, hasTestAttemptPassed,
+        // to inform mocha (through patch-package) that we need to re attempt a passed test
+        // if experimentalRetries is enabled and there is at least one existing failure
+        runnable.hasAttemptPassed = !err
       }
 
       if (err) {
@@ -1641,7 +1658,7 @@ export default {
             delete runnable.err
           }
 
-          err = maybeHandleRetry(runnable, err)
+          err = maybeHandleRetryOnFailure(runnable, err)
 
           return runnableAfterRunAsync(runnable, Cypress)
           .then(() => {
