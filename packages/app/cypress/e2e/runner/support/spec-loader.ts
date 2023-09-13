@@ -1,3 +1,5 @@
+import type { ProjectFixtureDir } from '@tooling/system-tests/lib/fixtureDirs'
+
 export const shouldHaveTestResults = ({ passCount, failCount, pendingCount }) => {
   passCount = passCount || '--'
   failCount = failCount || '--'
@@ -82,9 +84,10 @@ export function loadSpec (options: LoadSpecOptions) {
   shouldHaveTestResults({ passCount, failCount, pendingCount })
 }
 
-export function runSpec ({ fileName }: { fileName: string }) {
-  cy.scaffoldProject('runner-e2e-specs')
-  cy.openProject('runner-e2e-specs')
+export function runSpec ({ fileName, projectName }: { fileName: string, projectName?: ProjectFixtureDir }) {
+  projectName = projectName || 'runner-e2e-specs'
+  cy.scaffoldProject(projectName)
+  cy.openProject(projectName)
   cy.startAppServer()
 
   cy.visitApp(`specs/runner?file=cypress/e2e/runner/${fileName}`)
