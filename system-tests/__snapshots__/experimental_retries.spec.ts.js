@@ -545,7 +545,6 @@ exports['e2e retries.experimentalStrategy / experimentalBurnIn=false / "detect-f
 
   suite 2
     ✖(Attempt 1 of 10) test 1
-    ✓(Attempt 2 of 10) test 1
     ✖(Attempt 2 of 10) test 1
     ✓(Attempt 3 of 10) test 1
     ✓(Attempt 4 of 10) test 1
@@ -893,7 +892,6 @@ exports['e2e retries.experimentalStrategy / experimentalBurnIn=false / "detect-f
 
   suite 2
     ✖(Attempt 1 of 10) test 1
-    ✓(Attempt 2 of 10) test 1
     ✖(Attempt 2 of 10) test 1
     ✓(Attempt 3 of 10) test 1
     ✓(Attempt 4 of 10) test 1
@@ -1323,8 +1321,6 @@ exports['e2e retries.experimentalStrategy / experimentalBurnIn=false / "detect-f
 
   suite 2
     ✖(Attempt 1 of 10) test 1
-    ✓(Attempt 2 of 10) test 1
-    ✖ test 1
     ✖(Attempt 2 of 10) test 1
     ✓(Attempt 3 of 10) test 1
     ✖ test 1

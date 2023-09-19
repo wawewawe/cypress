@@ -219,8 +219,7 @@ describe('e2e retries.experimentalStrategy', () => {
         browser: '!webkit',
         spec: 'runner/experimental-retries/*',
         snapshot: true,
-        // FIXME: this should be 8
-        expectedExitCode: 9,
+        expectedExitCode: 8,
         config: {
           experimentalBurnIn: false,
           retries: {
@@ -241,8 +240,7 @@ describe('e2e retries.experimentalStrategy', () => {
         browser: '!webkit',
         spec: 'runner/experimental-retries/*',
         snapshot: true,
-        // FIXME: this should be 8
-        expectedExitCode: 9,
+        expectedExitCode: 8,
         config: {
           experimentalBurnIn: false,
           retries: {
