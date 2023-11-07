@@ -13,6 +13,7 @@ import { pathToFileURL } from 'url'
 import os from 'os'
 import type { OTLPTraceExporterCloud } from '@packages/telemetry'
 import { telemetry, encodeTelemetryContext } from '@packages/telemetry'
+import * as semver from 'semver'
 
 const pkg = require('@packages/root')
 const debug = debugLib(`cypress:lifecycle:ProjectConfigIpc`)
@@ -272,6 +273,8 @@ export class ProjectConfigIpc extends EventEmitter {
     debug('fork child process %o', { CHILD_PROCESS_FILE_PATH, configProcessArgs, childOptions: _.omit(childOptions, 'env') })
 
     let isProjectUsingESModules = false
+    let isProjectUsingTypescriptGreaterThanOrEqualTo5 = false
+    let isProjectUsingBundlerModuleResolution = false
 
     try {
       // TODO: convert this to async FS methods
@@ -279,6 +282,18 @@ export class ProjectConfigIpc extends EventEmitter {
       const pkgJson = fs.readJsonSync(path.join(this.projectRoot, 'package.json'))
 
       isProjectUsingESModules = pkgJson.type === 'module'
+      const typescriptVersion = semver.valid(semver.coerce(pkgJson.devDependencies['typescript'] || pkgJson.dependencies['typescript']))
+
+      if (!typescriptVersion) {
+        isProjectUsingTypescriptGreaterThanOrEqualTo5 = false
+      } else {
+        isProjectUsingTypescriptGreaterThanOrEqualTo5 = semver.gte(typescriptVersion, '5.0.0')
+      }
+
+      // eslint-disable-next-line no-restricted-syntax
+      const tsconfig = fs.readJsonSync(path.join(this.projectRoot, 'tsconfig.json'))
+
+      isProjectUsingBundlerModuleResolution = tsconfig.compilerOptions.moduleResolution === 'bundler'
     } catch (e) {
       // project does not have `package.json` or it was not found
       // reasonable to assume not using es modules
@@ -293,6 +308,7 @@ export class ProjectConfigIpc extends EventEmitter {
     // ts-node/esm for ESM
     if (hasTypeScriptInstalled(this.projectRoot)) {
       debug('found typescript in %s', this.projectRoot)
+
       if (isProjectUsingESModules) {
         debug(`using --experimental-specifier-resolution=node with --loader ${tsNodeEsm}`)
         // Use the ts-node/esm loader so they can use TypeScript with `"type": "module".
@@ -329,6 +345,26 @@ export class ProjectConfigIpc extends EventEmitter {
       // Just use Node's built-in ESM support.
       // TODO: Consider using userland `esbuild` with Node's --loader API to handle ESM.
       debug(`no typescript found, just use regular Node.js`)
+    }
+
+    if (isProjectUsingTypescriptGreaterThanOrEqualTo5) {
+      debug('the project is using typescript version greater than 5')
+
+      // calculate it using moduleResolution bundler
+      if (isProjectUsingBundlerModuleResolution) {
+        debug('the project is using moduleResolution type bundler')
+        // This sets the TS_NODE_SKIP_PROJECT config resolution to false
+        // https://typestrong.org/ts-node/docs/options/#skipproject
+        const tsNodeTS5Loader = `TS_NODE_SKIP_PROJECT=false`
+
+        debug(`adding ${tsNodeTS5Loader} to node env`)
+
+        if (childOptions.env.NODE_OPTIONS) {
+          childOptions.env.NODE_OPTIONS += ` ${tsNodeTS5Loader}`
+        } else {
+          childOptions.env.NODE_OPTIONS = tsNodeTS5Loader
+        }
+      }
     }
 
     const telemetryCtx = encodeTelemetryContext({ context: telemetry.getActiveContextObject(), version: pkg.version })
